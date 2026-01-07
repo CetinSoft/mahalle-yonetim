@@ -1,14 +1,22 @@
-import { neon } from '@neondatabase/serverless'
+import { Pool, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
 
-// Create a SQL function using Neon's serverless driver
-// This is optimized for serverless environments like Vercel
-const sql = neon(process.env.DATABASE_URL!)
+// Enable WebSocket for local development (not needed on Vercel)
+if (typeof WebSocket === 'undefined') {
+    neonConfig.webSocketConstructor = ws
+}
 
-// Helper function to run queries with proper error handling
+// Database connection string - hardcoded as requested
+const DATABASE_URL = "postgresql://neondb_owner:npg_ocWPFCf1Q6hg@ep-bitter-mountain-a481q9of-pooler.us-east-1.aws.neon.tech/saadetuye?sslmode=require"
+
+// Create connection pool
+const pool = new Pool({ connectionString: DATABASE_URL })
+
+// Helper function to run queries
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
     try {
-        const result = await sql(text, params || [])
-        return result as T[]
+        const result = await pool.query(text, params)
+        return result.rows as T[]
     } catch (error) {
         console.error('Database query error:', error)
         throw error
@@ -69,7 +77,6 @@ export interface Invitation {
     invitedAt: Date
 }
 
-// Invitation with joined citizen data
 export interface InvitationWithCitizen extends Invitation {
     citizen: Citizen
 }
