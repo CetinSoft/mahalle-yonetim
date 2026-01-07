@@ -1,23 +1,9 @@
-import { auth } from "@/auth"
-import { NextResponse } from "next/server"
+import NextAuth from "next-auth"
+import { authConfig } from "./auth.config"
 
-export default auth((req) => {
-    const isLoggedIn = !!req.auth
-    const isOnDashboard = req.nextUrl.pathname.startsWith('/dashboard')
-    const isOnUpload = req.nextUrl.pathname.startsWith('/upload')
-    const isOnLogin = req.nextUrl.pathname.startsWith('/login')
-
-    if (isOnDashboard || isOnUpload) {
-        if (isLoggedIn) return
-        return NextResponse.redirect(new URL('/login', req.nextUrl))
-    }
-
-    if (isOnLogin) {
-        if (isLoggedIn) return NextResponse.redirect(new URL('/dashboard', req.nextUrl))
-        return
-    }
-})
+// Lightweight middleware export that uses Edge-compatible config
+export const { auth: middleware } = NextAuth(authConfig)
 
 export const config = {
-    matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+    matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 }

@@ -1,8 +1,10 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
+import { authConfig } from "./auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+    ...authConfig,
     providers: [
         Credentials({
             credentials: {
@@ -44,9 +46,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 // Check against expected format
                 if (password !== expectedPassword) {
-                    // We can also keep the old check (telefon) as a fallback if desired, 
-                    // but user explicitly asked for this new format.
-                    // Let's implement Strict adherence to new rule.
                     throw new Error("Hatalı şifre.")
                 }
 
@@ -59,26 +58,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
         }),
     ],
-    callbacks: {
-        async session({ session, token }) {
-            if (token.sub && session.user) {
-                // Fetch fresh data if needed, or stick to token
-                // Adding custom fields to session requires type augmentation, 
-                // for now we use 'email' as mahalle carrier or we can augment types later.
-                // Let's rely on what we returned in authorize.
-                // session.user.mahalle = token.mahalle (if we added it to token)
-            }
-            return session
-        },
-        async jwt({ token, user, trigger, session }) {
-            if (user) {
-                token.sub = user.id
-                // user.email contains 'mahalle' from authorize return
-            }
-            return token
-        }
-    },
-    pages: {
-        signIn: "/login",
-    },
 })
