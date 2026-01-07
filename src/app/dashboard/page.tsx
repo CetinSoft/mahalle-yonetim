@@ -1,14 +1,12 @@
 import { auth } from "@/auth"
 import { query, queryOne, Citizen, Event, Invitation } from "@/lib/db"
+import { isAdminTC } from "@/lib/admin"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
 interface EventWithInvitations extends Event {
     invitations: { citizenId: string; invitedBy: string }[]
 }
-
-// Admin TC numarası
-const ADMIN_TC = '48316184410'
 
 export default async function DashboardPage({
     searchParams,
@@ -17,7 +15,7 @@ export default async function DashboardPage({
 }) {
     const session = await auth()
     const userMahalle = session?.user?.email // Hijacked field
-    const isAdmin = session?.user?.image === ADMIN_TC
+    const isAdmin = isAdminTC(session?.user?.image)
 
     if (!userMahalle && !isAdmin) {
         return <div>Mahalle bilgisi bulunamadı.</div>

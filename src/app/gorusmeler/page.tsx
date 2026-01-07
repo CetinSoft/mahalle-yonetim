@@ -1,9 +1,7 @@
 import { auth } from "@/auth"
 import { query, Gorusme, Citizen } from "@/lib/db"
+import { isAdminTC } from "@/lib/admin"
 import Link from "next/link"
-
-// Admin TC numarası
-const ADMIN_TC = '48316184410'
 
 interface GorusmeWithCitizen extends Gorusme {
     citizenAd: string
@@ -19,7 +17,7 @@ export default async function GorusmelerPage({
     const session = await auth()
     const userMahalle = session?.user?.email
     const userName = session?.user?.name || userMahalle  // Görüşmeyi yapan ismi
-    const isAdmin = session?.user?.image === ADMIN_TC
+    const isAdmin = isAdminTC(session?.user?.image)
 
     if (!userMahalle && !isAdmin) {
         return <div>Yetkiniz yok.</div>

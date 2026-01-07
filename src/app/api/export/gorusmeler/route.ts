@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { query, Gorusme } from '@/lib/db'
+import { isAdminTC } from '@/lib/admin'
 import * as XLSX from 'xlsx'
-
-const ADMIN_TC = '48316184410'
 
 interface GorusmeWithCitizen extends Gorusme {
     citizenAd: string
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
     const session = await auth()
     const userMahalle = session?.user?.email
     const userName = session?.user?.name || userMahalle
-    const isAdmin = session?.user?.image === ADMIN_TC
+    const isAdmin = isAdminTC(session?.user?.image)
 
     if (!userMahalle && !isAdmin) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
