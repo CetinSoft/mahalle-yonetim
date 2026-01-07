@@ -299,13 +299,13 @@ export default async function DashboardPage({
                                 <th className="px-6 py-3">Yargıtay Bilgisi</th>
                                 <th className="px-6 py-3">Meslek</th>
                                 <th className="px-6 py-3">Görevi</th>
-                                {activeEvent && <th className="px-6 py-3 text-right">Etkinlik</th>}
+                                <th className="px-6 py-3 text-right">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {citizens.length === 0 ? (
                                 <tr>
-                                    <td colSpan={activeEvent ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={isAdmin && !selectedMahalle ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
                                         Kayıtlı üye bulunmamaktadır.
                                     </td>
                                 </tr>
@@ -358,31 +358,40 @@ export default async function DashboardPage({
                                             <td className="px-6 py-4 text-gray-600">
                                                 {citizen.gorevi || '-'}
                                             </td>
-                                            {activeEvent && (
-                                                <td className="px-6 py-4 text-right">
-                                                    {invitedBy ? (
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
-                                                                Davet Edildi
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {/* Görüşme Ekle Butonu */}
+                                                    <a
+                                                        href={`/citizen/${citizen.id}#gorusme`}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-200 hover:bg-purple-100 transition"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                                                        Görüşme
+                                                    </a>
+
+                                                    {/* Etkinliğe Davet Butonu */}
+                                                    {activeEvent && (
+                                                        invitedBy ? (
+                                                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                                Davetli
                                                             </span>
-                                                            <span className="text-[10px] text-gray-400 mt-1">
-                                                                {invitedBy}
-                                                            </span>
-                                                        </div>
-                                                    ) : (
-                                                        <form action={async () => {
-                                                            "use server"
-                                                            await inviteCitizen(citizen.id, activeEvent.id)
-                                                        }}>
-                                                            <button
-                                                                className="bg-gray-900 hover:bg-black text-white text-xs font-bold py-1.5 px-4 rounded-full shadow-sm transition-transform active:scale-95"
-                                                            >
-                                                                Davet Et
-                                                            </button>
-                                                        </form>
+                                                        ) : (
+                                                            <form action={async () => {
+                                                                "use server"
+                                                                await inviteCitizen(citizen.id, activeEvent.id)
+                                                            }}>
+                                                                <button
+                                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200 hover:bg-blue-100 transition"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" /></svg>
+                                                                    Davet Et
+                                                                </button>
+                                                            </form>
+                                                        )
                                                     )}
-                                                </td>
-                                            )}
+                                                </div>
+                                            </td>
                                         </tr>
                                     )
                                 })
@@ -394,3 +403,4 @@ export default async function DashboardPage({
         </div>
     )
 }
+
