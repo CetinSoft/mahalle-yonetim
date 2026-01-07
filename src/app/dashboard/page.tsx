@@ -13,7 +13,7 @@ const ADMIN_TC = '48316184410'
 export default async function DashboardPage({
     searchParams,
 }: {
-    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string }
+    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string; arama?: string }
 }) {
     const session = await auth()
     const userMahalle = session?.user?.email // Hijacked field
@@ -23,7 +23,7 @@ export default async function DashboardPage({
         return <div>Mahalle bilgisi bulunamadı.</div>
     }
 
-    const { yargitay, cinsiyet, gorevi, mahalle } = await searchParams
+    const { yargitay, cinsiyet, gorevi, mahalle, arama } = await searchParams
 
     // Admin için mahalle seçimi, normal kullanıcı için kendi mahallesi
     const selectedMahalle = isAdmin ? (mahalle || undefined) : userMahalle
@@ -63,6 +63,14 @@ export default async function DashboardPage({
         whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("gorevi" IS NULL OR "gorevi" = '')`
     } else if (goreviFilter === 'basmusahit') {
         whereClause += (whereClause ? ' AND' : 'WHERE') + ` "gorevi" ILIKE '%başmüşahit%'`
+    }
+
+    // Arama filtresi - ad, soyad veya TC ile arama
+    if (arama && arama.trim()) {
+        const searchTerm = arama.trim()
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("ad" ILIKE $${paramIndex} OR "soyad" ILIKE $${paramIndex} OR "tcNo" ILIKE $${paramIndex} OR CONCAT("ad", ' ', "soyad") ILIKE $${paramIndex})`
+        params.push(`%${searchTerm}%`)
+        paramIndex++
     }
 
     const citizens = await query<Citizen>(
@@ -136,6 +144,7 @@ export default async function DashboardPage({
             yargitay: yargitay,
             gorevi: goreviFilter,
             mahalle: selectedMahalle,
+            arama: arama,
         }
         const merged = { ...current, ...overrides }
         const parts: string[] = []
@@ -143,6 +152,7 @@ export default async function DashboardPage({
         if (merged.yargitay) parts.push(`yargitay=${merged.yargitay}`)
         if (merged.gorevi) parts.push(`gorevi=${merged.gorevi}`)
         if (merged.mahalle && isAdmin) parts.push(`mahalle=${merged.mahalle}`)
+        if (merged.arama) parts.push(`arama=${encodeURIComponent(merged.arama)}`)
         return `?${parts.join('&')}`
     }
 
@@ -184,7 +194,7 @@ export default async function DashboardPage({
             )}
 
             <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{displayTitle} Listesi</h1>
                     <div className="flex items-center gap-3">
                         {/* Only show Admin Link to the hardcoded Admin */}
@@ -198,6 +208,42 @@ export default async function DashboardPage({
                         </div>
                     </div>
                 </div>
+
+                {/* Arama Kutusu */}
+                <form method="GET" className="flex gap-2">
+                    {/* Mevcut filtreleri gizli input olarak koru */}
+                    {cinsiyetFilter && <input type="hidden" name="cinsiyet" value={cinsiyetFilter} />}
+                    {yargitay && <input type="hidden" name="yargitay" value={yargitay} />}
+                    {goreviFilter && <input type="hidden" name="gorevi" value={goreviFilter} />}
+                    {selectedMahalle && isAdmin && <input type="hidden" name="mahalle" value={selectedMahalle} />}
+
+                    <div className="relative flex-1 max-w-md">
+                        <input
+                            type="text"
+                            name="arama"
+                            placeholder="İsim, soyisim veya TC ile ara..."
+                            defaultValue={arama || ''}
+                            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                        </svg>
+                    </div>
+                    <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                    >
+                        Ara
+                    </button>
+                    {arama && (
+                        <a
+                            href={buildFilterUrl({ arama: undefined })}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                        >
+                            Temizle
+                        </a>
+                    )}
+                </form>
 
                 <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
                     {/* Mahalle Filter - Only for Admin */}
