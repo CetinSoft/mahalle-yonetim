@@ -1,5 +1,5 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { queryOne, Citizen } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, User, Phone, MapPin, Briefcase, Calendar, Info, Heart } from "lucide-react"
@@ -9,9 +9,10 @@ import { notFound } from "next/navigation"
 export default async function CitizenDetailPage({ params }: { params: { id: string } }) {
     const { id } = await params
 
-    const citizen = await prisma.citizen.findUnique({
-        where: { id },
-    })
+    const citizen = await queryOne<Citizen>(
+        'SELECT * FROM "Citizen" WHERE id = $1',
+        [id]
+    )
 
     if (!citizen) {
         notFound()
@@ -58,8 +59,8 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
                                 </a>
                             )}
                             <div className={`text-center px-3 py-1 rounded-full text-xs font-bold border ${citizen.yargitayDurumu?.includes('AKTİF') ? 'bg-green-50 text-green-700 border-green-200' :
-                                    citizen.yargitayDurumu?.includes('ONAMA') || citizen.yargitayDurumu?.includes('İSTİFA') ? 'bg-red-50 text-red-700 border-red-200' :
-                                        'bg-gray-50 text-gray-700 border-gray-200'
+                                citizen.yargitayDurumu?.includes('ONAMA') || citizen.yargitayDurumu?.includes('İSTİFA') ? 'bg-red-50 text-red-700 border-red-200' :
+                                    'bg-gray-50 text-gray-700 border-gray-200'
                                 }`}>
                                 {citizen.yargitayDurumu || 'Yargıtay Durumu Yok'}
                             </div>

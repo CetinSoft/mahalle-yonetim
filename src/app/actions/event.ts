@@ -1,13 +1,13 @@
 'use server'
 
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { query, queryOne } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 const CreateEventSchema = z.object({
     title: z.string().min(3),
-    date: z.string(), // HTML date input returns string
+    date: z.string(),
 })
 
 export async function createEvent(formData: FormData): Promise<void> {
@@ -16,7 +16,6 @@ export async function createEvent(formData: FormData): Promise<void> {
         throw new Error("Unauthorized")
     }
 
-    // Only allow "Admin" to create events
     if (session.user.image !== '48316184410') {
         throw new Error("Sadece yöneticiler etkinlik oluşturabilir.")
     }
@@ -33,20 +32,11 @@ export async function createEvent(formData: FormData): Promise<void> {
     const { title, date } = validatedFields.data
 
     try {
-        // Deactivate other events if we want only one active? 
-        // Or just create. The user said "aktif olan son etkinlik".
-        // Let's just create it. We can manage activation separately or auto-activate.
-
-        await prisma.event.create({
-            data: {
-                title,
-                date: new Date(date),
-                isActive: true, // Auto-activate on creation for ease of use
-            },
-        })
-
-        // If we want only ONE active event at a time, we should update others.
-        // For now, let's assume the UI picks the *latest* active one.
+        await query(
+            `INSERT INTO "Event" (id, title, date, "isActive", "createdAt") 
+             VALUES (gen_random_uuid(), $1, $2, true, NOW())`,
+            [title, new Date(date)]
+        )
 
         revalidatePath('/dashboard')
         revalidatePath('/admin/events')
@@ -65,10 +55,10 @@ export async function toggleEventStatus(eventId: string, isActive: boolean): Pro
     }
 
     try {
-        await prisma.event.update({
-            where: { id: eventId },
-            data: { isActive }
-        })
+        await query(
+            `UPDATE "Event" SET "isActive" = $1 WHERE id = $2`,
+            [isActive, eventId]
+        )
         revalidatePath('/dashboard')
         revalidatePath('/admin/events')
     } catch (error) {
@@ -76,29 +66,22 @@ export async function toggleEventStatus(eventId: string, isActive: boolean): Pro
     }
 }
 
-export async function inviteCitizen(citizenId: string, eventId: string) {
+export async function inviteCitizen(citizenId: string, eventId: string): Promise<void> {
     const session = await auth()
     if (!session?.user) throw new Error("Unauthorized")
 
-    // Determine inviter name
-    // Hardcoded admin has specific TC, mapped name?
-    // User session structure: { user: { email: "MAHALLE ADI", name: "USER NAME" } }
-    // We will use the name if available, otherwise email (Mahalle Name), otherwise "Admin".
     const inviterName = session.user.name || session.user.email || "Yönetici"
 
     try {
-        await prisma.invitation.create({
-            data: {
-                citizenId,
-                eventId,
-                invitedBy: inviterName
-            }
-        })
+        await query(
+            `INSERT INTO "Invitation" (id, "citizenId", "eventId", "invitedBy", "invitedAt") 
+             VALUES (gen_random_uuid(), $1, $2, $3, NOW())
+             ON CONFLICT ("citizenId", "eventId") DO NOTHING`,
+            [citizenId, eventId, inviterName]
+        )
         revalidatePath('/dashboard')
-        return { success: true }
     } catch (error) {
         console.error("Invite Error:", error)
-        // Check if unique constraint violation (already invited)
-        return { error: "Davet edilemedi veya zaten davetli" }
+        throw new Error("Davet edilemedi veya zaten davetli")
     }
 }

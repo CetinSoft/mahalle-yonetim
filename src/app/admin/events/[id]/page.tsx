@@ -1,7 +1,19 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { query, queryOne, Event, Citizen } from "@/lib/db"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+
+interface InvitationWithCitizen {
+    id: string
+    citizenId: string
+    eventId: string
+    invitedBy: string
+    invitedAt: Date
+    citizenAd: string
+    citizenSoyad: string
+    citizenTelefon: string | null
+    citizenMahalle: string
+}
 
 export default async function EventDetailPage({
     params,
@@ -29,39 +41,44 @@ export default async function EventDetailPage({
     }
 
     // Fetch Event details
-    const event = await prisma.event.findUnique({
-        where: { id },
-    })
+    const event = await queryOne<Event>(
+        'SELECT * FROM "Event" WHERE id = $1',
+        [id]
+    )
 
     if (!event) return notFound()
 
     // Fetch Invitations with Citizen data
-    // Apply mahalle filter if present
-    const invitations = await prisma.invitation.findMany({
-        where: {
-            eventId: id,
-            citizen: mahalle && mahalle !== 'all' ? { mahalle } : undefined
-        },
-        include: {
-            citizen: true
-        },
-        orderBy: { invitedAt: 'desc' }
-    })
+    let invitationQuery = `
+        SELECT 
+            i.id, i."citizenId", i."eventId", i."invitedBy", i."invitedAt",
+            c.ad as "citizenAd", c.soyad as "citizenSoyad", 
+            c.telefon as "citizenTelefon", c.mahalle as "citizenMahalle"
+        FROM "Invitation" i
+        JOIN "Citizen" c ON c.id = i."citizenId"
+        WHERE i."eventId" = $1
+    `
+    const queryParams: any[] = [id]
 
-    // Get distinct mahalles (from ALL invitations of this event, to build filter)
-    // We need a separate query or aggregation for the filter dropdown
-    // to show options even if current list is filtered.
-    const allInvitationsForFilter = await prisma.invitation.findMany({
-        where: { eventId: id },
-        select: { citizen: { select: { mahalle: true } } }
-    })
+    if (mahalle && mahalle !== 'all') {
+        invitationQuery += ` AND c.mahalle = $2`
+        queryParams.push(mahalle)
+    }
 
-    // Extract unique mahalle names
-    const mahalleSet = new Set<string>()
-    allInvitationsForFilter.forEach(inv => {
-        if (inv.citizen.mahalle) mahalleSet.add(inv.citizen.mahalle)
-    })
-    const distinctMahalles = Array.from(mahalleSet).sort()
+    invitationQuery += ` ORDER BY i."invitedAt" DESC`
+
+    const invitations = await query<InvitationWithCitizen>(invitationQuery, queryParams)
+
+    // Get distinct mahalles for filter
+    const allMahalles = await query<{ mahalle: string }>(`
+        SELECT DISTINCT c.mahalle 
+        FROM "Invitation" i
+        JOIN "Citizen" c ON c.id = i."citizenId"
+        WHERE i."eventId" = $1
+        ORDER BY c.mahalle
+    `, [id])
+
+    const distinctMahalles = allMahalles.map(m => m.mahalle)
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-5xl">
@@ -72,7 +89,7 @@ export default async function EventDetailPage({
                     </Link>
                     <h1 className="text-3xl font-bold">{event.title} - Katılımcı Raporu</h1>
                     <p className="text-gray-500 mt-1">
-                        {event.date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        {new Date(event.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                 </div>
                 <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 text-center">
@@ -132,21 +149,21 @@ export default async function EventDetailPage({
                             invitations.map(inv => (
                                 <tr key={inv.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 font-medium text-gray-900">
-                                        <a href={`/citizen/${inv.citizen.id}`} target="_blank" className="hover:text-blue-600 hover:underline">
-                                            {inv.citizen.ad} {inv.citizen.soyad}
+                                        <a href={`/citizen/${inv.citizenId}`} target="_blank" className="hover:text-blue-600 hover:underline">
+                                            {inv.citizenAd} {inv.citizenSoyad}
                                         </a>
                                     </td>
                                     <td className="px-6 py-4 text-gray-600">
-                                        {inv.citizen.telefon || '-'}
+                                        {inv.citizenTelefon || '-'}
                                     </td>
                                     <td className="px-6 py-4 text-gray-600">
-                                        {inv.citizen.mahalle}
+                                        {inv.citizenMahalle}
                                     </td>
                                     <td className="px-6 py-4 text-gray-600">
                                         {inv.invitedBy}
                                     </td>
                                     <td className="px-6 py-4 text-gray-500 text-xs">
-                                        {inv.invitedAt.toLocaleString('tr-TR')}
+                                        {new Date(inv.invitedAt).toLocaleString('tr-TR')}
                                     </td>
                                 </tr>
                             ))

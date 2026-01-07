@@ -1,13 +1,11 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { query, queryOne, Citizen, Event, Invitation } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// Assuming shadcn table is not added, I'll use raw Tailwind table for speed or request add. 
-// "Premium" requests usually mean good UI. I should add `table` via shadcn. 
-// For this turn, I will assume the user (me) will add it in the next tool call if I haven't. 
-// I'll stick to raw tailwind structure that looks like shadcn table for now to avoid dependency on unadded component, OR I will add it immediately.
-// Safer to add it. But I can't do parallel formatting. I will use standard HTML5 + Tailwind classes mimicking Shadcn.
-
 import Link from "next/link"
+
+interface EventWithInvitations extends Event {
+    invitations: { citizenId: string; invitedBy: string }[]
+}
 
 export default async function DashboardPage({
     searchParams,
@@ -24,19 +22,29 @@ export default async function DashboardPage({
     const { yargitay, cinsiyet } = await searchParams
 
     // Default Cinsiyet to 'E' if not present
-    // If user explicitly wants 'Tümü' (All), they might pass 'all', handled below.
     const cinsiyetFilter = cinsiyet === 'all' ? undefined : (cinsiyet || 'E')
 
-    const citizens = await prisma.citizen.findMany({
-        where: {
-            mahalle: userMahalle,
-            yargitayDurumu: yargitay ? { contains: yargitay } : undefined,
-            cinsiyet: cinsiyetFilter ? { equals: cinsiyetFilter } : undefined,
-        },
-        orderBy: {
-            ad: 'asc'
-        }
-    })
+    // Build dynamic WHERE clause
+    let whereClause = 'WHERE "mahalle" = $1'
+    const params: any[] = [userMahalle]
+    let paramIndex = 2
+
+    if (yargitay) {
+        whereClause += ` AND "yargitayDurumu" ILIKE $${paramIndex}`
+        params.push(`%${yargitay}%`)
+        paramIndex++
+    }
+
+    if (cinsiyetFilter) {
+        whereClause += ` AND "cinsiyet" = $${paramIndex}`
+        params.push(cinsiyetFilter)
+        paramIndex++
+    }
+
+    const citizens = await query<Citizen>(
+        `SELECT * FROM "Citizen" ${whereClause} ORDER BY "ad" ASC`,
+        params
+    )
 
     const FilterButton = ({ label, active, href }: { label: string, active: boolean, href: string }) => (
         <Link
@@ -51,42 +59,36 @@ export default async function DashboardPage({
     )
 
     // Fetch distinct Yargitay statuses for dynamic filtering
-    const distinctYargitay = await prisma.citizen.findMany({
-        where: {
-            mahalle: userMahalle,
-            yargitayDurumu: { not: null } // Only get non-null statuses
-        },
-        select: {
-            yargitayDurumu: true
-        },
-        distinct: ['yargitayDurumu']
-    })
+    const distinctYargitay = await query<{ yargitayDurumu: string }>(
+        `SELECT DISTINCT "yargitayDurumu" FROM "Citizen" 
+         WHERE "mahalle" = $1 AND "yargitayDurumu" IS NOT NULL AND "yargitayDurumu" != ''`,
+        [userMahalle]
+    )
 
-    // Filter out empty strings if any exist in the distinct set
     const yargitayOptions = distinctYargitay
         .map(i => i.yargitayDurumu)
         .filter(status => status && status.trim().length > 0)
 
-    // Fetch Active Event
-    const activeEvent = await prisma.event.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: 'desc' },
-        include: {
-            invitations: {
-                select: { citizenId: true, invitedBy: true }
-            }
-        }
-    })
+    // Fetch Active Event with invitations
+    const activeEvent = await queryOne<Event>(
+        `SELECT * FROM "Event" WHERE "isActive" = true ORDER BY "createdAt" DESC LIMIT 1`
+    )
 
-    // Create a map of invitations for quick lookup
-    const invitationMap = new Map()
+    let invitationMap = new Map<string, string>()
+    let eventInvitations: { citizenId: string; invitedBy: string }[] = []
+
     if (activeEvent) {
-        activeEvent.invitations.forEach(inv => {
+        const invitations = await query<{ citizenId: string; invitedBy: string }>(
+            `SELECT "citizenId", "invitedBy" FROM "Invitation" WHERE "eventId" = $1`,
+            [activeEvent.id]
+        )
+        eventInvitations = invitations
+        invitations.forEach(inv => {
             invitationMap.set(inv.citizenId, inv.invitedBy)
         })
     }
 
-    // Import action for client component usage (using inline form action for simplicity)
+    // Import action for client component usage
     const { inviteCitizen } = await import('@/app/actions/event')
 
     return (
@@ -98,11 +100,11 @@ export default async function DashboardPage({
                         <div className="text-blue-100 text-sm font-semibold uppercase tracking-wider mb-1">Aktif Etkinlik</div>
                         <h2 className="text-2xl font-bold mb-1">{activeEvent.title}</h2>
                         <div className="text-blue-100 opacity-90 text-sm">
-                            {activeEvent.date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {new Date(activeEvent.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-3xl font-bold">{activeEvent.invitations.length}</div>
+                        <div className="text-3xl font-bold">{eventInvitations.length}</div>
                         <div className="text-blue-100 text-xs uppercase tracking-wide">Katılımcı</div>
                     </div>
                 </div>
@@ -190,7 +192,6 @@ export default async function DashboardPage({
                                                 <a href={`/citizen/${citizen.id}`} className="block group-hover:text-blue-600 transition-colors">
                                                     <div className="flex flex-col">
                                                         <span className="text-base">{citizen.ad} {citizen.soyad}</span>
-                                                        {/* Explicitly NOT showing TC as requested */}
                                                     </div>
                                                 </a>
                                             </td>
@@ -208,7 +209,6 @@ export default async function DashboardPage({
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-gray-600">
-                                                {/* Yargitay Status - might be empty if import failed */}
                                                 {citizen.yargitayDurumu ? (
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${citizen.yargitayDurumu === 'ONAMA' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
                                                         }`}>

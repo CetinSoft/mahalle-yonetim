@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma } from "@/lib/prisma"
+import { query } from "@/lib/db"
 import * as XLSX from 'xlsx'
 import { revalidatePath } from "next/cache"
 import * as fs from 'fs'
@@ -24,7 +24,6 @@ export async function uploadExcel(formData: FormData) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
 
-        // Use header:1 to get array of arrays, allowing index-based access (A=0, B=1, ... W=22)
         let data: any[][] = []
 
         // Check for HTML content (common in "fake" xls exports)
@@ -34,15 +33,11 @@ export async function uploadExcel(formData: FormData) {
             logDebug("File detected as HTML/XML exports. Parsing manually.")
 
             const fileContent = buffer.toString()
-            // Naive HTML Table Parser
-            // Find all <tr>
             const rows = fileContent.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || []
 
             data = rows.map(rowHtml => {
-                // Find all <td>
                 const cells = rowHtml.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || []
                 return cells.map(cell => {
-                    // Strip tags
                     return cell.replace(/<[^>]+>/g, '').trim()
                 })
             })
@@ -66,38 +61,11 @@ export async function uploadExcel(formData: FormData) {
         let successCount = 0
         let errorCount = 0
 
-        // Skip header row if it exists. We assume row 0 is header.
-        // We'll filter for rows that look like data (have TC at index 7).
         const startRow = 1
 
         for (let i = startRow; i < data.length; i++) {
             const row = data[i]
             if (!row || row.length === 0) continue
-
-            // Column Mapping (0-based index matches A-W)
-            // A: İlçe (0)
-            // B: Mahalle (1)
-            // C: Ad (2)
-            // D: Soyad (3)
-            // E: Anne Adı (4)
-            // F: Baba Adı (5)
-            // G: Cinsiyet (6)
-            // H: T.C. No (7)
-            // I: Telefon (8)
-            // J: Meslek (9)
-            // K: Tahsil (10)
-            // L: Yargitay Durumu (11)
-            // M: D. Tarihi (12)
-            // N: D. Yeri (13)
-            // O: Sandık No (14)
-            // P: Kan Grubu (15)
-            // Q: Karar No (16)
-            // R: Karar Tarihi (17)
-            // S: Üye Kayıt Tarihi (18)
-            // T: Adres (19)
-            // U: Görevi (20)
-            // V: Sms İstiyorum (21)
-            // W: Üye Yapan (22)
 
             const ilce = String(row[0] || '').trim()
             const mahalle = String(row[1] || '').trim()
@@ -125,7 +93,6 @@ export async function uploadExcel(formData: FormData) {
 
             // TC Validation
             if (!tcNo || tcNo.length < 11) {
-                // Determine if this is just an empty row or invalid data
                 if (tcNo.length > 0) {
                     console.warn(`Row ${i + 1}: Skipped invalid TC: "${tcNo}" (Length: ${tcNo.length})`)
                     errorCount++
@@ -136,60 +103,49 @@ export async function uploadExcel(formData: FormData) {
             }
 
             try {
-                await prisma.citizen.upsert({
-                    where: { tcNo },
-                    update: {
-                        ilce,
-                        mahalle,
-                        ad,
-                        soyad,
-                        anneAdi,
-                        babaAdi,
-                        cinsiyet,
-                        telefon,
-                        meslek,
-                        tahsil,
-                        yargitayDurumu,
-                        dogumTarihi,
-                        dogumYeri,
-                        sandikNo,
-                        kanGrubu,
-                        kararNo,
-                        kararTarihi,
-                        uyeKayitTarihi,
-                        adres,
-                        gorevi,
-                        smsIstiyorum,
-                        uyeYapan,
-                        password: telefon, // Set password to phone number
-                    },
-                    create: {
-                        tcNo,
-                        ilce,
-                        mahalle,
-                        ad,
-                        soyad,
-                        anneAdi,
-                        babaAdi,
-                        cinsiyet,
-                        telefon,
-                        meslek,
-                        tahsil,
-                        yargitayDurumu,
-                        dogumTarihi,
-                        dogumYeri,
-                        sandikNo,
-                        kanGrubu,
-                        kararNo,
-                        kararTarihi,
-                        uyeKayitTarihi,
-                        adres,
-                        gorevi,
-                        smsIstiyorum,
-                        uyeYapan,
-                        password: telefon, // Set password to phone number
-                    },
-                })
+                await query(`
+                    INSERT INTO "Citizen" (
+                        id, "tcNo", ilce, mahalle, ad, soyad, "anneAdi", "babaAdi", cinsiyet,
+                        telefon, meslek, tahsil, "yargitayDurumu", "dogumTarihi", "dogumYeri",
+                        "sandikNo", "kanGrubu", "kararNo", "kararTarihi", "uyeKayitTarihi",
+                        adres, gorevi, "smsIstiyorum", "uyeYapan", password, "createdAt", "updatedAt"
+                    ) VALUES (
+                        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8,
+                        $9, $10, $11, $12, $13, $14,
+                        $15, $16, $17, $18, $19,
+                        $20, $21, $22, $23, $9, NOW(), NOW()
+                    )
+                    ON CONFLICT ("tcNo") DO UPDATE SET
+                        ilce = EXCLUDED.ilce,
+                        mahalle = EXCLUDED.mahalle,
+                        ad = EXCLUDED.ad,
+                        soyad = EXCLUDED.soyad,
+                        "anneAdi" = EXCLUDED."anneAdi",
+                        "babaAdi" = EXCLUDED."babaAdi",
+                        cinsiyet = EXCLUDED.cinsiyet,
+                        telefon = EXCLUDED.telefon,
+                        meslek = EXCLUDED.meslek,
+                        tahsil = EXCLUDED.tahsil,
+                        "yargitayDurumu" = EXCLUDED."yargitayDurumu",
+                        "dogumTarihi" = EXCLUDED."dogumTarihi",
+                        "dogumYeri" = EXCLUDED."dogumYeri",
+                        "sandikNo" = EXCLUDED."sandikNo",
+                        "kanGrubu" = EXCLUDED."kanGrubu",
+                        "kararNo" = EXCLUDED."kararNo",
+                        "kararTarihi" = EXCLUDED."kararTarihi",
+                        "uyeKayitTarihi" = EXCLUDED."uyeKayitTarihi",
+                        adres = EXCLUDED.adres,
+                        gorevi = EXCLUDED.gorevi,
+                        "smsIstiyorum" = EXCLUDED."smsIstiyorum",
+                        "uyeYapan" = EXCLUDED."uyeYapan",
+                        password = EXCLUDED.telefon,
+                        "updatedAt" = NOW()
+                `, [
+                    tcNo, ilce, mahalle, ad, soyad, anneAdi, babaAdi, cinsiyet,
+                    telefon, meslek, tahsil, yargitayDurumu, dogumTarihi, dogumYeri,
+                    sandikNo, kanGrubu, kararNo, kararTarihi, uyeKayitTarihi,
+                    adres, gorevi, smsIstiyorum, uyeYapan
+                ])
                 successCount++
             } catch (err) {
                 console.error(`Row ${i + 1} processing error:`, err)

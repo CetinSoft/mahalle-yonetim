@@ -1,8 +1,11 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/prisma"
+import { query, Event } from "@/lib/db"
 import { createEvent, toggleEventStatus } from "@/app/actions/event"
-import { revalidatePath } from "next/cache"
 import Link from "next/link"
+
+interface EventWithCount extends Event {
+    invitationCount: number
+}
 
 export default async function AdminEventsPage() {
     const session = await auth()
@@ -21,14 +24,14 @@ export default async function AdminEventsPage() {
         )
     }
 
-    const events = await prisma.event.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-            _count: {
-                select: { invitations: true }
-            }
-        }
-    })
+    const events = await query<EventWithCount>(`
+        SELECT e.*, 
+               COALESCE(COUNT(i.id), 0)::int as "invitationCount"
+        FROM "Event" e
+        LEFT JOIN "Invitation" i ON i."eventId" = e.id
+        GROUP BY e.id
+        ORDER BY e."createdAt" DESC
+    `)
 
     return (
         <div className="container mx-auto py-10 px-4 max-w-4xl">
@@ -92,7 +95,7 @@ export default async function AdminEventsPage() {
                             <tr key={event.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 font-medium text-gray-900">{event.title}</td>
                                 <td className="px-6 py-4 text-gray-600">
-                                    {event.date.toLocaleDateString('tr-TR')}
+                                    {new Date(event.date).toLocaleDateString('tr-TR')}
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${event.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
@@ -101,7 +104,7 @@ export default async function AdminEventsPage() {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-gray-600 font-bold">
-                                    {event._count.invitations}
+                                    {event.invitationCount}
                                 </td>
                                 <td className="px-6 py-4">
                                     <form action={async () => {

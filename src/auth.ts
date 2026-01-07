@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { prisma } from "@/lib/prisma"
+import { query, Citizen } from "@/lib/db"
 import { authConfig } from "./auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -29,10 +29,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     }
                 }
 
-                // Find citizen by TC
-                const citizen = await prisma.citizen.findUnique({
-                    where: { tcNo },
-                })
+                // Find citizen by TC using direct SQL
+                const citizens = await query<Citizen>(
+                    'SELECT * FROM "Citizen" WHERE "tcNo" = $1 LIMIT 1',
+                    [tcNo]
+                )
+                const citizen = citizens[0]
 
                 if (!citizen) {
                     throw new Error("Kayıt bulunamadı.")
