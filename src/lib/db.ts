@@ -1,28 +1,17 @@
-import { Pool } from 'pg'
+import { neon } from '@neondatabase/serverless'
 
-// Connection pool - reused across requests
-const globalForDb = globalThis as unknown as { pool: Pool }
-
-export const pool = globalForDb.pool || new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-})
-
-if (process.env.NODE_ENV !== 'production') globalForDb.pool = pool
+// Create a SQL function using Neon's serverless driver
+// This is optimized for serverless environments like Vercel
+const sql = neon(process.env.DATABASE_URL!)
 
 // Helper function to run queries with proper error handling
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
-    const client = await pool.connect()
     try {
-        const result = await client.query(text, params)
-        return result.rows as T[]
-    } finally {
-        client.release()
+        const result = await sql(text, params || [])
+        return result as T[]
+    } catch (error) {
+        console.error('Database query error:', error)
+        throw error
     }
 }
 
