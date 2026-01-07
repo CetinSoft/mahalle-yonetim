@@ -7,36 +7,50 @@ interface EventWithInvitations extends Event {
     invitations: { citizenId: string; invitedBy: string }[]
 }
 
+// Admin TC numarası
+const ADMIN_TC = '48316184410'
+
 export default async function DashboardPage({
     searchParams,
 }: {
-    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string }
+    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string }
 }) {
     const session = await auth()
     const userMahalle = session?.user?.email // Hijacked field
+    const isAdmin = session?.user?.image === ADMIN_TC
 
-    if (!userMahalle) {
+    if (!userMahalle && !isAdmin) {
         return <div>Mahalle bilgisi bulunamadı.</div>
     }
 
-    const { yargitay, cinsiyet, gorevi } = await searchParams
+    const { yargitay, cinsiyet, gorevi, mahalle } = await searchParams
+
+    // Admin için mahalle seçimi, normal kullanıcı için kendi mahallesi
+    const selectedMahalle = isAdmin ? (mahalle || undefined) : userMahalle
 
     // Default Cinsiyet to 'E' if not present
     const cinsiyetFilter = cinsiyet === 'all' ? undefined : (cinsiyet || 'E')
 
     // Build dynamic WHERE clause
-    let whereClause = 'WHERE "mahalle" = $1'
-    const params: any[] = [userMahalle]
-    let paramIndex = 2
+    let whereClause = ''
+    const params: any[] = []
+    let paramIndex = 1
+
+    // Mahalle filtresi - admin seçmezse tüm mahalleler, normal kullanıcı kendi mahallesi
+    if (selectedMahalle) {
+        whereClause = `WHERE "mahalle" = $${paramIndex}`
+        params.push(selectedMahalle)
+        paramIndex++
+    }
 
     if (yargitay) {
-        whereClause += ` AND "yargitayDurumu" ILIKE $${paramIndex}`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` "yargitayDurumu" ILIKE $${paramIndex}`
         params.push(`%${yargitay}%`)
         paramIndex++
     }
 
     if (cinsiyetFilter) {
-        whereClause += ` AND "cinsiyet" = $${paramIndex}`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` "cinsiyet" = $${paramIndex}`
         params.push(cinsiyetFilter)
         paramIndex++
     }
@@ -44,14 +58,11 @@ export default async function DashboardPage({
     // Görevi filter - 3 fixed categories: var, yok, basmusahit
     const goreviFilter = gorevi === 'all' ? undefined : gorevi
     if (goreviFilter === 'var') {
-        // Görevi var - has any role
-        whereClause += ` AND "gorevi" IS NOT NULL AND "gorevi" != ''`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` "gorevi" IS NOT NULL AND "gorevi" != ''`
     } else if (goreviFilter === 'yok') {
-        // Görevi yok - no role
-        whereClause += ` AND ("gorevi" IS NULL OR "gorevi" = '')`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("gorevi" IS NULL OR "gorevi" = '')`
     } else if (goreviFilter === 'basmusahit') {
-        // Başmüşahit specifically
-        whereClause += ` AND "gorevi" ILIKE '%başmüşahit%'`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` "gorevi" ILIKE '%başmüşahit%'`
     }
 
     const citizens = await query<Citizen>(
@@ -71,11 +82,25 @@ export default async function DashboardPage({
         </Link>
     )
 
+    // Fetch all distinct mahalles for admin filter
+    let mahalleOptions: string[] = []
+    if (isAdmin) {
+        const distinctMahalles = await query<{ mahalle: string }>(
+            `SELECT DISTINCT "mahalle" FROM "Citizen" 
+             WHERE "mahalle" IS NOT NULL AND "mahalle" != ''
+             ORDER BY "mahalle" ASC`
+        )
+        mahalleOptions = distinctMahalles.map(m => m.mahalle)
+    }
+
     // Fetch distinct Yargitay statuses for dynamic filtering
+    const yargitayQuery = selectedMahalle
+        ? `SELECT DISTINCT "yargitayDurumu" FROM "Citizen" WHERE "mahalle" = $1 AND "yargitayDurumu" IS NOT NULL AND "yargitayDurumu" != ''`
+        : `SELECT DISTINCT "yargitayDurumu" FROM "Citizen" WHERE "yargitayDurumu" IS NOT NULL AND "yargitayDurumu" != ''`
+
     const distinctYargitay = await query<{ yargitayDurumu: string }>(
-        `SELECT DISTINCT "yargitayDurumu" FROM "Citizen" 
-         WHERE "mahalle" = $1 AND "yargitayDurumu" IS NOT NULL AND "yargitayDurumu" != ''`,
-        [userMahalle]
+        yargitayQuery,
+        selectedMahalle ? [selectedMahalle] : []
     )
 
     const yargitayOptions = distinctYargitay
@@ -104,8 +129,43 @@ export default async function DashboardPage({
     // Import action for client component usage
     const { inviteCitizen } = await import('@/app/actions/event')
 
+    // Build filter URL helper
+    const buildFilterUrl = (overrides: Record<string, string | undefined>) => {
+        const current = {
+            cinsiyet: cinsiyetFilter || 'all',
+            yargitay: yargitay,
+            gorevi: goreviFilter,
+            mahalle: selectedMahalle,
+        }
+        const merged = { ...current, ...overrides }
+        const parts: string[] = []
+        if (merged.cinsiyet) parts.push(`cinsiyet=${merged.cinsiyet}`)
+        if (merged.yargitay) parts.push(`yargitay=${merged.yargitay}`)
+        if (merged.gorevi) parts.push(`gorevi=${merged.gorevi}`)
+        if (merged.mahalle && isAdmin) parts.push(`mahalle=${merged.mahalle}`)
+        return `?${parts.join('&')}`
+    }
+
+    // Display title
+    const displayTitle = isAdmin
+        ? (selectedMahalle ? `${selectedMahalle} Mahallesi` : 'Tüm Mahalleler')
+        : `${userMahalle} Mahallesi`
+
     return (
         <div className="space-y-6">
+            {/* Admin Badge */}
+            {isAdmin && (
+                <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-4 text-white shadow-lg flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                    </div>
+                    <div>
+                        <span className="font-bold">Yönetici Modu</span>
+                        <span className="text-purple-200 ml-2 text-sm">Tüm mahallelere erişiminiz var</span>
+                    </div>
+                </div>
+            )}
+
             {/* Active Event Banner */}
             {activeEvent && (
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg flex items-center justify-between">
@@ -125,10 +185,10 @@ export default async function DashboardPage({
 
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{userMahalle} Mahallesi Listesi</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{displayTitle} Listesi</h1>
                     <div className="flex items-center gap-3">
                         {/* Only show Admin Link to the hardcoded Admin */}
-                        {session?.user?.image === '48316184410' && (
+                        {isAdmin && (
                             <Link href="/admin/events" className="text-sm font-medium text-blue-600 hover:underline">
                                 + Etkinlik Yönetimi
                             </Link>
@@ -140,12 +200,37 @@ export default async function DashboardPage({
                 </div>
 
                 <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    {/* Mahalle Filter - Only for Admin */}
+                    {isAdmin && (
+                        <>
+                            <div className="space-y-2">
+                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Mahalle</span>
+                                <div className="flex flex-wrap gap-2">
+                                    <FilterButton
+                                        label="Tüm Mahalleler"
+                                        active={!selectedMahalle}
+                                        href={buildFilterUrl({ mahalle: undefined })}
+                                    />
+                                    {mahalleOptions.map((m) => (
+                                        <FilterButton
+                                            key={m}
+                                            label={m}
+                                            active={selectedMahalle === m}
+                                            href={buildFilterUrl({ mahalle: m })}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="w-px bg-gray-200 hidden md:block"></div>
+                        </>
+                    )}
+
                     <div className="space-y-2">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cinsiyet / Medeni (Varsayılan E)</span>
                         <div className="flex gap-2">
-                            <FilterButton label="Erkek (E)" active={cinsiyetFilter === 'E'} href={`?cinsiyet=E${yargitay ? `&yargitay=${yargitay}` : ''}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`} />
-                            <FilterButton label="Kadın (K)" active={cinsiyetFilter === 'K'} href={`?cinsiyet=K${yargitay ? `&yargitay=${yargitay}` : ''}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`} />
-                            <FilterButton label="Tümü" active={cinsiyetFilter === undefined} href={`?cinsiyet=all${yargitay ? `&yargitay=${yargitay}` : ''}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`} />
+                            <FilterButton label="Erkek (E)" active={cinsiyetFilter === 'E'} href={buildFilterUrl({ cinsiyet: 'E' })} />
+                            <FilterButton label="Kadın (K)" active={cinsiyetFilter === 'K'} href={buildFilterUrl({ cinsiyet: 'K' })} />
+                            <FilterButton label="Tümü" active={cinsiyetFilter === undefined} href={buildFilterUrl({ cinsiyet: 'all' })} />
                         </div>
                     </div>
 
@@ -157,14 +242,14 @@ export default async function DashboardPage({
                             <FilterButton
                                 label="Tümü"
                                 active={!yargitay}
-                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`}
+                                href={buildFilterUrl({ yargitay: undefined })}
                             />
                             {yargitayOptions.map((status) => (
                                 <FilterButton
                                     key={status}
                                     label={status!}
                                     active={yargitay === status}
-                                    href={`?cinsiyet=${cinsiyetFilter || 'all'}&yargitay=${status}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`}
+                                    href={buildFilterUrl({ yargitay: status })}
                                 />
                             ))}
                             {yargitayOptions.length === 0 && (
@@ -181,22 +266,22 @@ export default async function DashboardPage({
                             <FilterButton
                                 label="Tümü"
                                 active={!goreviFilter}
-                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}`}
+                                href={buildFilterUrl({ gorevi: undefined })}
                             />
                             <FilterButton
                                 label="Görevi Var"
                                 active={goreviFilter === 'var'}
-                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=var`}
+                                href={buildFilterUrl({ gorevi: 'var' })}
                             />
                             <FilterButton
                                 label="Görevi Yok"
                                 active={goreviFilter === 'yok'}
-                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=yok`}
+                                href={buildFilterUrl({ gorevi: 'yok' })}
                             />
                             <FilterButton
                                 label="Başmüşahit"
                                 active={goreviFilter === 'basmusahit'}
-                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=basmusahit`}
+                                href={buildFilterUrl({ gorevi: 'basmusahit' })}
                             />
                         </div>
                     </div>
@@ -210,6 +295,7 @@ export default async function DashboardPage({
                             <tr>
                                 <th className="px-6 py-3">Ad Soyad</th>
                                 <th className="px-6 py-3">Telefon</th>
+                                {isAdmin && !selectedMahalle && <th className="px-6 py-3">Mahalle</th>}
                                 <th className="px-6 py-3">Yargıtay Bilgisi</th>
                                 <th className="px-6 py-3">Meslek</th>
                                 <th className="px-6 py-3">Görevi</th>
@@ -219,8 +305,8 @@ export default async function DashboardPage({
                         <tbody className="divide-y divide-gray-100">
                             {citizens.length === 0 ? (
                                 <tr>
-                                    <td colSpan={activeEvent ? 6 : 5} className="px-6 py-8 text-center text-gray-500">
-                                        Bu mahallede kayıtlı üye bulunmamaktadır.
+                                    <td colSpan={activeEvent ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
+                                        Kayıtlı üye bulunmamaktadır.
                                     </td>
                                 </tr>
                             ) : (
@@ -249,6 +335,13 @@ export default async function DashboardPage({
                                                     <span className="text-gray-400 italic">-</span>
                                                 )}
                                             </td>
+                                            {isAdmin && !selectedMahalle && (
+                                                <td className="px-6 py-4 text-gray-600">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                                        {citizen.mahalle}
+                                                    </span>
+                                                </td>
+                                            )}
                                             <td className="px-6 py-4 text-gray-600">
                                                 {citizen.yargitayDurumu ? (
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${citizen.yargitayDurumu === 'ONAMA' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'
