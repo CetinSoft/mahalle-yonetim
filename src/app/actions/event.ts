@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth"
 import { query, queryOne } from "@/lib/db"
+import { isAdminTC } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
@@ -16,7 +17,7 @@ export async function createEvent(formData: FormData): Promise<void> {
         throw new Error("Unauthorized")
     }
 
-    if (session.user.image !== '48316184410') {
+    if (!isAdminTC(session.user.image)) {
         throw new Error("Sadece yöneticiler etkinlik oluşturabilir.")
     }
 

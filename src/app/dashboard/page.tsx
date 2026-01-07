@@ -432,9 +432,13 @@ export default async function DashboardPage({
                                                     </a>
 
                                                     {/* Etkinliğe Davet Butonu */}
+                                                    {/* Etkinliğe Davet Butonu */}
                                                     {activeEvent && (
                                                         invitedBy ? (
-                                                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+                                                            <span
+                                                                title={`Davetli: ${activeEvent.title}`}
+                                                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200 cursor-help"
+                                                            >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                                                                 Davetli
                                                             </span>
@@ -444,6 +448,7 @@ export default async function DashboardPage({
                                                                 await inviteCitizen(citizen.id, activeEvent.id)
                                                             }}>
                                                                 <button
+                                                                    title={`Etkinliğe Davet Et: ${activeEvent.title}`}
                                                                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200 hover:bg-blue-100 transition"
                                                                 >
                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" /></svg>

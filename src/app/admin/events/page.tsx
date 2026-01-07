@@ -1,5 +1,6 @@
 import { auth } from "@/auth"
 import { query, Event } from "@/lib/db"
+import { isAdminTC } from "@/lib/admin"
 import { createEvent, toggleEventStatus } from "@/app/actions/event"
 import Link from "next/link"
 
@@ -11,8 +12,8 @@ export default async function AdminEventsPage() {
     const session = await auth()
     if (!session?.user) return <div>Yetkisiz Giriş</div>
 
-    // Admin Check
-    if (session.user.image !== '48316184410') {
+    // Admin Check - tüm adminler girebilir
+    if (!isAdminTC(session.user.image)) {
         return (
             <div className="container mx-auto py-20 text-center">
                 <h1 className="text-2xl font-bold text-red-600 mb-4">Yetkisiz Alan</h1>
