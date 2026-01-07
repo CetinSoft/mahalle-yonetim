@@ -1,0 +1,66 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Citizen {
+  id              String   @id @default(cuid())
+  tcNo            String   @unique
+  ad              String
+  soyad           String
+  telefon         String?
+  uyeDurumu       String?  // Keep for backward compatibility or internal logic
+  adres           String?
+  mahalle         String
+  
+  ilce            String?
+  anneAdi         String?
+  babaAdi         String?
+  cinsiyet        String?
+  meslek          String?
+  tahsil          String?
+  yargitayDurumu  String?
+  dogumTarihi     String?
+  dogumYeri       String?
+  sandikNo        String?
+  kanGrubu        String?
+  kararNo         String?
+  kararTarihi     String?
+  uyeKayitTarihi  String?
+  gorevi          String?
+  smsIstiyorum    String?
+  uyeYapan        String?
+
+  password        String? 
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([mahalle])
+  invitations   Invitation[]
+}
+
+model Event {
+  id          String       @id @default(cuid())
+  title       String
+  date        DateTime
+  isActive    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  invitations Invitation[]
+}
+
+model Invitation {
+  id        String   @id @default(cuid())
+  citizenId String
+  citizen   Citizen  @relation(fields: [citizenId], references: [id])
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  invitedBy String   // Name of the logged-in user who clicked
+  invitedAt DateTime @default(now())
+
+  @@unique([citizenId, eventId]) // Prevent double inviting
+}
