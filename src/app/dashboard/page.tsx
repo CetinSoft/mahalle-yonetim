@@ -10,7 +10,7 @@ interface EventWithInvitations extends Event {
 export default async function DashboardPage({
     searchParams,
 }: {
-    searchParams: { yargitay?: string; cinsiyet?: string }
+    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string }
 }) {
     const session = await auth()
     const userMahalle = session?.user?.email // Hijacked field
@@ -19,7 +19,7 @@ export default async function DashboardPage({
         return <div>Mahalle bilgisi bulunamadı.</div>
     }
 
-    const { yargitay, cinsiyet } = await searchParams
+    const { yargitay, cinsiyet, gorevi } = await searchParams
 
     // Default Cinsiyet to 'E' if not present
     const cinsiyetFilter = cinsiyet === 'all' ? undefined : (cinsiyet || 'E')
@@ -38,6 +38,14 @@ export default async function DashboardPage({
     if (cinsiyetFilter) {
         whereClause += ` AND "cinsiyet" = $${paramIndex}`
         params.push(cinsiyetFilter)
+        paramIndex++
+    }
+
+    // Görevi filter
+    const goreviFilter = gorevi === 'all' ? undefined : gorevi
+    if (goreviFilter) {
+        whereClause += ` AND "gorevi" = $${paramIndex}`
+        params.push(goreviFilter)
         paramIndex++
     }
 
@@ -68,6 +76,17 @@ export default async function DashboardPage({
     const yargitayOptions = distinctYargitay
         .map(i => i.yargitayDurumu)
         .filter(status => status && status.trim().length > 0)
+
+    // Fetch distinct Görevi values for filtering
+    const distinctGorevi = await query<{ gorevi: string }>(
+        `SELECT DISTINCT "gorevi" FROM "Citizen" 
+         WHERE "mahalle" = $1 AND "gorevi" IS NOT NULL AND "gorevi" != ''`,
+        [userMahalle]
+    )
+
+    const goreviOptions = distinctGorevi
+        .map(i => i.gorevi)
+        .filter(g => g && g.trim().length > 0)
 
     // Fetch Active Event with invitations
     const activeEvent = await queryOne<Event>(
@@ -130,9 +149,9 @@ export default async function DashboardPage({
                     <div className="space-y-2">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cinsiyet / Medeni (Varsayılan E)</span>
                         <div className="flex gap-2">
-                            <FilterButton label="Erkek (E)" active={cinsiyetFilter === 'E'} href={`?cinsiyet=E${yargitay ? `&yargitay=${yargitay}` : ''}`} />
-                            <FilterButton label="Kadın (K)" active={cinsiyetFilter === 'K'} href={`?cinsiyet=K${yargitay ? `&yargitay=${yargitay}` : ''}`} />
-                            <FilterButton label="Tümü" active={cinsiyetFilter === undefined} href={`?cinsiyet=all${yargitay ? `&yargitay=${yargitay}` : ''}`} />
+                            <FilterButton label="Erkek (E)" active={cinsiyetFilter === 'E'} href={`?cinsiyet=E${yargitay ? `&yargitay=${yargitay}` : ''}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`} />
+                            <FilterButton label="Kadın (K)" active={cinsiyetFilter === 'K'} href={`?cinsiyet=K${yargitay ? `&yargitay=${yargitay}` : ''}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`} />
+                            <FilterButton label="Tümü" active={cinsiyetFilter === undefined} href={`?cinsiyet=all${yargitay ? `&yargitay=${yargitay}` : ''}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`} />
                         </div>
                     </div>
 
@@ -144,18 +163,42 @@ export default async function DashboardPage({
                             <FilterButton
                                 label="Tümü"
                                 active={!yargitay}
-                                href={`?cinsiyet=${cinsiyetFilter || 'all'}`}
+                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`}
                             />
                             {yargitayOptions.map((status) => (
                                 <FilterButton
                                     key={status}
                                     label={status!}
                                     active={yargitay === status}
-                                    href={`?cinsiyet=${cinsiyetFilter || 'all'}&yargitay=${status}`}
+                                    href={`?cinsiyet=${cinsiyetFilter || 'all'}&yargitay=${status}${goreviFilter ? `&gorevi=${goreviFilter}` : ''}`}
                                 />
                             ))}
                             {yargitayOptions.length === 0 && (
                                 <span className="text-xs text-gray-400 italic py-1.5">Kayıtlı durum yok</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="w-px bg-gray-200 hidden md:block"></div>
+
+                    <div className="space-y-2">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Görevi</span>
+                        <div className="flex flex-wrap gap-2">
+                            <FilterButton
+                                label="Tümü"
+                                active={!goreviFilter}
+                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}`}
+                            />
+                            {goreviOptions.map((g) => (
+                                <FilterButton
+                                    key={g}
+                                    label={g!}
+                                    active={goreviFilter === g}
+                                    href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=${g}`}
+                                />
+                            ))}
+                            {goreviOptions.length === 0 && (
+                                <span className="text-xs text-gray-400 italic py-1.5">Kayıtlı görev yok</span>
                             )}
                         </div>
                     </div>
