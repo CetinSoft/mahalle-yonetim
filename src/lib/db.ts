@@ -1,9 +1,15 @@
 import { Pool, neonConfig } from '@neondatabase/serverless'
-import ws from 'ws'
 
-// Enable WebSocket for local development (not needed on Vercel)
+// Enable WebSocket for local development (not needed on Vercel Edge)
+// @ts-ignore - ws is optional and only needed locally
 if (typeof WebSocket === 'undefined') {
-    neonConfig.webSocketConstructor = ws
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const ws = require('ws')
+        neonConfig.webSocketConstructor = ws
+    } catch (e) {
+        // ws module not available, running on Vercel Edge
+    }
 }
 
 // Database connection string - hardcoded as requested
