@@ -18,6 +18,7 @@ export default async function GorusmelerPage({
 }) {
     const session = await auth()
     const userMahalle = session?.user?.email
+    const userName = session?.user?.name || userMahalle  // Görüşmeyi yapan ismi
     const isAdmin = session?.user?.image === ADMIN_TC
 
     if (!userMahalle && !isAdmin) {
@@ -31,10 +32,15 @@ export default async function GorusmelerPage({
     const params: any[] = []
     let paramIndex = 1
 
-    // Admin mahalle seçebilir, normal kullanıcı sadece kendi mahallesini görür
-    const selectedMahalle = isAdmin ? mahalle : userMahalle
+    // Admin mahalle seçebilir, normal kullanıcı sadece kendi yaptığı görüşmeleri görür
+    const selectedMahalle = isAdmin ? mahalle : undefined
 
-    if (selectedMahalle) {
+    // Normal kullanıcılar sadece kendi yaptıkları görüşmeleri görür
+    if (!isAdmin) {
+        whereClause = `WHERE g."gorusmeYapan" = $${paramIndex}`
+        params.push(userName)
+        paramIndex++
+    } else if (selectedMahalle) {
         whereClause = `WHERE c."mahalle" = $${paramIndex}`
         params.push(selectedMahalle)
         paramIndex++
@@ -103,12 +109,14 @@ export default async function GorusmelerPage({
     }
 
     return (
-        <div className="space-y-6">
+        <div className="container max-w-6xl mx-auto py-6 px-4 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Görüşme Listesi</h1>
-                    <p className="text-gray-500 mt-1">Tüm görüşme kayıtları</p>
+                    <p className="text-gray-500 mt-1">
+                        {isAdmin ? 'Tüm görüşme kayıtları' : 'Yaptığınız görüşme kayıtları'}
+                    </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Link href="/dashboard" className="text-sm font-medium text-blue-600 hover:underline">
