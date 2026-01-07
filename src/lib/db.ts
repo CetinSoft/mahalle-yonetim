@@ -80,3 +80,20 @@ export interface Invitation {
 export interface InvitationWithCitizen extends Invitation {
     citizen: Citizen
 }
+
+// Görüşme takip sistemi
+export interface Gorusme {
+    id: string
+    citizenId: string
+    gorusmeYapan: string      // Görüşmeyi yapan kişi
+    gorusmeTarihi: Date       // Görüşme tarihi
+    aciklama: string          // Açıklama/notlar
+    sonuc: 'olumlu' | 'olumsuz' | 'belirsiz'  // Sonuç
+    createdAt: Date
+}
+
+export interface GorusmeWithCitizen extends Gorusme {
+    citizenAd: string
+    citizenSoyad: string
+}
+

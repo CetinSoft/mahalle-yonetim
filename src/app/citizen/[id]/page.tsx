@@ -1,10 +1,10 @@
 import { auth } from "@/auth"
-import { queryOne, Citizen } from "@/lib/db"
+import { queryOne, query, Citizen, Gorusme } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, User, Phone, MapPin, Briefcase, Calendar, Info, Heart } from "lucide-react"
+import { ArrowLeft, User, Phone, MapPin, Briefcase, Calendar, Info, Heart, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import GorusmeForm from "@/components/GorusmeForm"
 
 export default async function CitizenDetailPage({ params }: { params: { id: string } }) {
     const { id } = await params
@@ -18,6 +18,12 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
         notFound()
     }
 
+    // Görüşme geçmişini getir
+    const gorusmeler = await query<Gorusme>(
+        'SELECT * FROM "Gorusme" WHERE "citizenId" = $1 ORDER BY "gorusmeTarihi" DESC',
+        [id]
+    )
+
     // Helper to render a data row
     const DetailRow = ({ icon: Icon, label, value, color = "text-gray-500" }: { icon: any, label: string, value?: string | null, color?: string }) => (
         <div className="flex items-start gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
@@ -30,6 +36,26 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
             </div>
         </div>
     )
+
+    // Sonuç badge renkleri
+    const getSonucStyle = (sonuc: string) => {
+        switch (sonuc) {
+            case 'olumlu':
+                return 'bg-green-50 text-green-700 border-green-200'
+            case 'olumsuz':
+                return 'bg-red-50 text-red-700 border-red-200'
+            default:
+                return 'bg-gray-50 text-gray-700 border-gray-200'
+        }
+    }
+
+    const getSonucLabel = (sonuc: string) => {
+        switch (sonuc) {
+            case 'olumlu': return 'Olumlu'
+            case 'olumsuz': return 'Olumsuz'
+            default: return 'Belirsiz'
+        }
+    }
 
     return (
         <div className="container max-w-4xl mx-auto py-8 px-4 space-y-8">
@@ -63,6 +89,21 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
                                     'bg-gray-50 text-gray-700 border-gray-200'
                                 }`}>
                                 {citizen.yargitayDurumu || 'Yargıtay Durumu Yok'}
+                            </div>
+
+                            {/* Görüşme Özeti */}
+                            <div className="mt-2 pt-3 border-t border-gray-100">
+                                <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Görüşme</div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-700">
+                                        {gorusmeler.length} görüşme
+                                    </span>
+                                    {gorusmeler.length > 0 && (
+                                        <span className={`text-xs px-2 py-0.5 rounded-full border ${getSonucStyle(gorusmeler[0].sonuc)}`}>
+                                            Son: {getSonucLabel(gorusmeler[0].sonuc)}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </CardContent>
@@ -102,6 +143,58 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
                                 <DetailRow icon={Info} label="Sandık No" value={citizen.sandikNo} />
                                 <DetailRow icon={Info} label="Üye Yapan" value={citizen.uyeYapan} />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Görüşme Ekle */}
+                    <Card className="shadow-md border-t-4 border-t-purple-500">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
+                                <MessageCircle size={20} className="text-purple-500" />
+                                Yeni Görüşme Ekle
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <GorusmeForm citizenId={id} citizenName={`${citizen.ad} ${citizen.soyad}`} />
+                        </CardContent>
+                    </Card>
+
+                    {/* Görüşme Geçmişi */}
+                    <Card className="shadow-md">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
+                                <MessageCircle size={20} className="text-indigo-500" />
+                                Görüşme Geçmişi ({gorusmeler.length})
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {gorusmeler.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    <MessageCircle size={40} className="mx-auto mb-3 text-gray-300" />
+                                    <p>Henüz görüşme kaydı yok</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {gorusmeler.map((g) => (
+                                        <div key={g.id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <span className="text-sm font-medium text-gray-900">
+                                                        {new Date(g.gorusmeTarihi).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400 ml-2">
+                                                        {g.gorusmeYapan}
+                                                    </span>
+                                                </div>
+                                                <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getSonucStyle(g.sonuc)}`}>
+                                                    {getSonucLabel(g.sonuc)}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-600">{g.aciklama}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
