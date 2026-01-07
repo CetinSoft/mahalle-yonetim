@@ -10,7 +10,7 @@ const CreateEventSchema = z.object({
     date: z.string(), // HTML date input returns string
 })
 
-export async function createEvent(formData: FormData) {
+export async function createEvent(formData: FormData): Promise<void> {
     const session = await auth()
     if (!session?.user) {
         throw new Error("Unauthorized")
@@ -18,7 +18,7 @@ export async function createEvent(formData: FormData) {
 
     // Only allow "Admin" to create events
     if (session.user.image !== '48316184410') {
-        return { error: "Sadece yöneticiler etkinlik oluşturabilir." }
+        throw new Error("Sadece yöneticiler etkinlik oluşturabilir.")
     }
 
     const validatedFields = CreateEventSchema.safeParse({
@@ -27,7 +27,7 @@ export async function createEvent(formData: FormData) {
     })
 
     if (!validatedFields.success) {
-        return { error: "Geçersiz veri" }
+        throw new Error("Geçersiz veri")
     }
 
     const { title, date } = validatedFields.data
@@ -50,19 +50,18 @@ export async function createEvent(formData: FormData) {
 
         revalidatePath('/dashboard')
         revalidatePath('/admin/events')
-        return { success: true }
     } catch (error) {
         console.error("Create Event Error:", error)
-        return { error: "Etkinlik oluşturulurken hata oluştu" }
+        throw new Error("Etkinlik oluşturulurken hata oluştu")
     }
 }
 
-export async function toggleEventStatus(eventId: string, isActive: boolean) {
+export async function toggleEventStatus(eventId: string, isActive: boolean): Promise<void> {
     const session = await auth()
     if (!session?.user) throw new Error("Unauthorized")
 
     if (session.user.image !== '48316184410') {
-        return { error: "Yetkisiz işlem" }
+        throw new Error("Yetkisiz işlem")
     }
 
     try {
@@ -72,9 +71,8 @@ export async function toggleEventStatus(eventId: string, isActive: boolean) {
         })
         revalidatePath('/dashboard')
         revalidatePath('/admin/events')
-        return { success: true }
     } catch (error) {
-        return { error: "Durum güncellenemedi" }
+        throw new Error("Durum güncellenemedi")
     }
 }
 
