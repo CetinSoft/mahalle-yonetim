@@ -41,12 +41,17 @@ export default async function DashboardPage({
         paramIndex++
     }
 
-    // Görevi filter
+    // Görevi filter - 3 fixed categories: var, yok, basmusahit
     const goreviFilter = gorevi === 'all' ? undefined : gorevi
-    if (goreviFilter) {
-        whereClause += ` AND "gorevi" = $${paramIndex}`
-        params.push(goreviFilter)
-        paramIndex++
+    if (goreviFilter === 'var') {
+        // Görevi var - has any role
+        whereClause += ` AND "gorevi" IS NOT NULL AND "gorevi" != ''`
+    } else if (goreviFilter === 'yok') {
+        // Görevi yok - no role
+        whereClause += ` AND ("gorevi" IS NULL OR "gorevi" = '')`
+    } else if (goreviFilter === 'basmusahit') {
+        // Başmüşahit specifically
+        whereClause += ` AND "gorevi" ILIKE '%başmüşahit%'`
     }
 
     const citizens = await query<Citizen>(
@@ -76,17 +81,6 @@ export default async function DashboardPage({
     const yargitayOptions = distinctYargitay
         .map(i => i.yargitayDurumu)
         .filter(status => status && status.trim().length > 0)
-
-    // Fetch distinct Görevi values for filtering
-    const distinctGorevi = await query<{ gorevi: string }>(
-        `SELECT DISTINCT "gorevi" FROM "Citizen" 
-         WHERE "mahalle" = $1 AND "gorevi" IS NOT NULL AND "gorevi" != ''`,
-        [userMahalle]
-    )
-
-    const goreviOptions = distinctGorevi
-        .map(i => i.gorevi)
-        .filter(g => g && g.trim().length > 0)
 
     // Fetch Active Event with invitations
     const activeEvent = await queryOne<Event>(
@@ -189,17 +183,21 @@ export default async function DashboardPage({
                                 active={!goreviFilter}
                                 href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}`}
                             />
-                            {goreviOptions.map((g) => (
-                                <FilterButton
-                                    key={g}
-                                    label={g!}
-                                    active={goreviFilter === g}
-                                    href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=${g}`}
-                                />
-                            ))}
-                            {goreviOptions.length === 0 && (
-                                <span className="text-xs text-gray-400 italic py-1.5">Kayıtlı görev yok</span>
-                            )}
+                            <FilterButton
+                                label="Görevi Var"
+                                active={goreviFilter === 'var'}
+                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=var`}
+                            />
+                            <FilterButton
+                                label="Görevi Yok"
+                                active={goreviFilter === 'yok'}
+                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=yok`}
+                            />
+                            <FilterButton
+                                label="Başmüşahit"
+                                active={goreviFilter === 'basmusahit'}
+                                href={`?cinsiyet=${cinsiyetFilter || 'all'}${yargitay ? `&yargitay=${yargitay}` : ''}&gorevi=basmusahit`}
+                            />
                         </div>
                     </div>
                 </div>
