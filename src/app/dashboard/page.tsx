@@ -197,6 +197,10 @@ export default async function DashboardPage({
                 <div className="flex items-center justify-between flex-wrap gap-4">
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{displayTitle} Listesi</h1>
                     <div className="flex items-center gap-3">
+                        {/* Görüşmeler linki - herkes görebilir */}
+                        <Link href="/gorusmeler" className="text-sm font-medium text-purple-600 hover:underline">
+                            📋 Görüşmeler
+                        </Link>
                         {/* Only show Admin Link to the hardcoded Admin */}
                         {isAdmin && (
                             <Link href="/admin/events" className="text-sm font-medium text-blue-600 hover:underline">
