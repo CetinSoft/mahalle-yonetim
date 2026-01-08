@@ -23,7 +23,7 @@ export async function assignUserMahalle(formData: FormData) {
     })
 
     if (!validatedFields.success) {
-        const errorMessages = validatedFields.error.errors.map((e: any) => e.message).join(', ')
+        const errorMessages = validatedFields.error.issues.map((e) => e.message).join(', ')
         throw new Error("Geçersiz veri: " + errorMessages)
     }
 
