@@ -246,6 +246,10 @@ export default async function UyelerPage({
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{displayTitle} Listesi</h1>
                         <div className="flex items-center gap-3">
+                            {/* Dashboard linki */}
+                            <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:underline">
+                                🏠 Dashboard
+                            </Link>
                             {/* Görüşmeler linki - herkes görebilir */}
                             <Link href="/gorusmeler" className="text-sm font-medium text-purple-600 hover:underline">
                                 📋 Görüşmeler
