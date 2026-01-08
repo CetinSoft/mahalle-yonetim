@@ -535,39 +535,43 @@ export default async function DashboardPage({
                             </Link>
                         )}
                         <div className="flex items-center gap-1">
-                            {/* İlk sayfa */}
-                            {currentPage > 3 && (
-                                <>
-                                    <Link href={buildPageUrl(1)} className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">1</Link>
-                                    {currentPage > 4 && <span className="text-gray-400">...</span>}
-                                </>
-                            )}
-                            {/* Sayfa numaraları */}
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i))
-                                if (pageNum < 1 || pageNum > totalPages) return null
-                                // Sadece mevcut sayfa etrafındaki 5 sayfayı göster
-                                if (pageNum < currentPage - 2 || pageNum > currentPage + 2) return null
-                                return (
-                                    <Link
-                                        key={pageNum}
-                                        href={buildPageUrl(pageNum)}
-                                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${pageNum === currentPage
-                                            ? 'bg-blue-600 text-white border border-blue-600'
-                                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        {pageNum}
-                                    </Link>
+                            {/* Sayfa numaraları - basit versiyon */}
+                            {(() => {
+                                const pages: number[] = []
+                                const start = Math.max(1, currentPage - 2)
+                                const end = Math.min(totalPages, currentPage + 2)
+
+                                if (start > 1) {
+                                    pages.push(1)
+                                    if (start > 2) pages.push(-1) // ... için
+                                }
+
+                                for (let i = start; i <= end; i++) {
+                                    pages.push(i)
+                                }
+
+                                if (end < totalPages) {
+                                    if (end < totalPages - 1) pages.push(-1) // ... için
+                                    pages.push(totalPages)
+                                }
+
+                                return pages.map((pageNum, idx) =>
+                                    pageNum === -1 ? (
+                                        <span key={`dots-${idx}`} className="text-gray-400 px-1">...</span>
+                                    ) : (
+                                        <Link
+                                            key={pageNum}
+                                            href={buildPageUrl(pageNum)}
+                                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${pageNum === currentPage
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {pageNum}
+                                        </Link>
+                                    )
                                 )
-                            })}
-                            {/* Son sayfa */}
-                            {currentPage < totalPages - 2 && (
-                                <>
-                                    {currentPage < totalPages - 3 && <span className="text-gray-400">...</span>}
-                                    <Link href={buildPageUrl(totalPages)} className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">{totalPages}</Link>
-                                </>
-                            )}
+                            })()}
                         </div>
                         {currentPage < totalPages && (
                             <Link
