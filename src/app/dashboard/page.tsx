@@ -7,10 +7,12 @@ interface EventWithInvitations extends Event {
     invitations: { citizenId: string; invitedBy: string }[]
 }
 
+const PAGE_SIZE = 50
+
 export default async function DashboardPage({
     searchParams,
 }: {
-    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string; arama?: string }
+    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string; arama?: string; sayfa?: string }
 }) {
     const session = await auth()
     const tcNo = session?.user?.image
@@ -34,7 +36,8 @@ export default async function DashboardPage({
         return <div className="p-10 text-center text-red-600 font-semibold">Mahalle yetkisi bulunamadı. Lütfen yöneticinizle iletişime geçin.</div>
     }
 
-    const { yargitay, cinsiyet, gorevi, mahalle, arama } = await searchParams
+    const { yargitay, cinsiyet, gorevi, mahalle, arama, sayfa } = await searchParams
+    const currentPage = Math.max(1, parseInt(sayfa || '1', 10) || 1)
 
     // Admin için mahalle seçimi, normal kullanıcı için kendi mahallesi
     const selectedMahalle = isAdmin ? (mahalle || undefined) : userMahalle
@@ -84,8 +87,18 @@ export default async function DashboardPage({
         paramIndex++
     }
 
+    // Önce toplam kayıt sayısını al
+    const countResult = await queryOne<{ count: string }>(
+        `SELECT COUNT(*) as count FROM "Citizen" ${whereClause}`,
+        params
+    )
+    const totalCount = parseInt(countResult?.count || '0', 10)
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+
+    // Sayfalama ile veri çek
+    const offset = (currentPage - 1) * PAGE_SIZE
     const citizens = await query<Citizen>(
-        `SELECT * FROM "Citizen" ${whereClause} ORDER BY "ad" ASC`,
+        `SELECT * FROM "Citizen" ${whereClause} ORDER BY "ad" ASC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
         params
     )
 
@@ -148,7 +161,7 @@ export default async function DashboardPage({
     // Import action for client component usage
     const { inviteCitizen } = await import('@/app/actions/event')
 
-    // Build filter URL helper
+    // Build filter URL helper (filtre değişince sayfa 1'e döner)
     const buildFilterUrl = (overrides: Record<string, string | undefined>) => {
         const current = {
             cinsiyet: cinsiyetFilter || 'all',
@@ -164,6 +177,18 @@ export default async function DashboardPage({
         if (merged.gorevi) parts.push(`gorevi=${merged.gorevi}`)
         if (merged.mahalle && isAdmin) parts.push(`mahalle=${merged.mahalle}`)
         if (merged.arama) parts.push(`arama=${encodeURIComponent(merged.arama)}`)
+        return `?${parts.join('&')}`
+    }
+
+    // Build page URL helper (mevcut filtreleri koruyarak sayfa değiştirir)
+    const buildPageUrl = (page: number) => {
+        const parts: string[] = []
+        if (cinsiyetFilter) parts.push(`cinsiyet=${cinsiyetFilter}`)
+        if (yargitay) parts.push(`yargitay=${yargitay}`)
+        if (goreviFilter) parts.push(`gorevi=${goreviFilter}`)
+        if (selectedMahalle && isAdmin) parts.push(`mahalle=${selectedMahalle}`)
+        if (arama) parts.push(`arama=${encodeURIComponent(arama)}`)
+        parts.push(`sayfa=${page}`)
         return `?${parts.join('&')}`
     }
 
@@ -231,7 +256,7 @@ export default async function DashboardPage({
                             </Link>
                         )}
                         <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border shadow-sm">
-                            Toplam: <span className="font-bold text-gray-900">{citizens.length}</span> Kişi
+                            Toplam: <span className="font-bold text-gray-900">{totalCount}</span> Kişi
                         </div>
                         {/* Excel Export Button */}
                         <a
@@ -492,6 +517,69 @@ export default async function DashboardPage({
                     </table>
                 </div>
             </div>
+
+            {/* Sayfalama */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="text-sm text-gray-600">
+                        Toplam <span className="font-semibold">{totalCount}</span> kayıttan{' '}
+                        <span className="font-semibold">{offset + 1}</span>-<span className="font-semibold">{Math.min(offset + PAGE_SIZE, totalCount)}</span> arası gösteriliyor
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {currentPage > 1 && (
+                            <Link
+                                href={buildPageUrl(currentPage - 1)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                            >
+                                ← Önceki
+                            </Link>
+                        )}
+                        <div className="flex items-center gap-1">
+                            {/* İlk sayfa */}
+                            {currentPage > 3 && (
+                                <>
+                                    <Link href={buildPageUrl(1)} className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">1</Link>
+                                    {currentPage > 4 && <span className="text-gray-400">...</span>}
+                                </>
+                            )}
+                            {/* Sayfa numaraları */}
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i))
+                                if (pageNum < 1 || pageNum > totalPages) return null
+                                // Sadece mevcut sayfa etrafındaki 5 sayfayı göster
+                                if (pageNum < currentPage - 2 || pageNum > currentPage + 2) return null
+                                return (
+                                    <Link
+                                        key={pageNum}
+                                        href={buildPageUrl(pageNum)}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition ${pageNum === currentPage
+                                            ? 'bg-blue-600 text-white border border-blue-600'
+                                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </Link>
+                                )
+                            })}
+                            {/* Son sayfa */}
+                            {currentPage < totalPages - 2 && (
+                                <>
+                                    {currentPage < totalPages - 3 && <span className="text-gray-400">...</span>}
+                                    <Link href={buildPageUrl(totalPages)} className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">{totalPages}</Link>
+                                </>
+                            )}
+                        </div>
+                        {currentPage < totalPages && (
+                            <Link
+                                href={buildPageUrl(currentPage + 1)}
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                            >
+                                Sonraki →
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
