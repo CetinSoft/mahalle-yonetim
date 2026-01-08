@@ -420,7 +420,7 @@ export default async function DashboardPage({
                                     const invitedBy = invitationMap.get(citizen.id)
 
                                     return (
-                                        <tr key={citizen.id} className="hover:bg-gray-50/80 transition-all group">
+                                        <tr key={citizen.id} className="hover:bg-gray-50 transition-all group">
                                             <td className="px-6 py-4 font-medium text-gray-900">
                                                 <a href={`/citizen/${citizen.id}`} className="block group-hover:text-blue-600 transition-colors">
                                                     <div className="flex flex-col">
