@@ -75,6 +75,14 @@ export interface Event {
     createdAt: Date
 }
 
+export interface UserMahalle {
+    id: string
+    tcNo: string
+    mahalle: string
+    assignedBy: string | null
+    createdAt: Date
+}
+
 export interface Invitation {
     id: string
     citizenId: string

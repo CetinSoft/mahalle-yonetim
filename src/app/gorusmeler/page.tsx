@@ -1,5 +1,5 @@
 import { auth } from "@/auth"
-import { query, Gorusme, Citizen } from "@/lib/db"
+import { query, queryOne, Gorusme, Citizen } from "@/lib/db"
 import { isAdminTC } from "@/lib/admin"
 import Link from "next/link"
 
@@ -15,9 +15,22 @@ export default async function GorusmelerPage({
     searchParams: { mahalle?: string; sonuc?: string; arama?: string }
 }) {
     const session = await auth()
-    const userMahalle = session?.user?.email
-    const userName = session?.user?.name || userMahalle  // Görüşmeyi yapan ismi
-    const isAdmin = isAdminTC(session?.user?.image)
+    const tcNo = session?.user?.image
+    const isAdmin = isAdminTC(tcNo)
+
+    // Kullanıcının yetkili olduğu mahalleyi bul
+    let userMahalle = session?.user?.email
+    const userName = session?.user?.name || userMahalle
+
+    if (tcNo && !isAdmin) {
+        const assignment = await queryOne<{ mahalle: string }>(
+            'SELECT mahalle FROM "UserMahalle" WHERE "tcNo" = $1',
+            [tcNo]
+        )
+        if (assignment) {
+            userMahalle = assignment.mahalle
+        }
+    }
 
     if (!userMahalle && !isAdmin) {
         return <div>Yetkiniz yok.</div>

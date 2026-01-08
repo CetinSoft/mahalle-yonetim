@@ -1,7 +1,6 @@
 import { auth } from "@/auth"
-import { query, queryOne, Citizen, Event, Invitation } from "@/lib/db"
+import { query, queryOne, Citizen, Event } from "@/lib/db"
 import { isAdminTC } from "@/lib/admin"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
 interface EventWithInvitations extends Event {
@@ -14,11 +13,25 @@ export default async function DashboardPage({
     searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string; arama?: string }
 }) {
     const session = await auth()
-    const userMahalle = session?.user?.email // Hijacked field
-    const isAdmin = isAdminTC(session?.user?.image)
+    const tcNo = session?.user?.image
+    const isAdmin = isAdminTC(tcNo)
+
+    // Kullanıcının yetkili olduğu mahalleyi bul
+    let userMahalle = session?.user?.email
+
+    // Eğer admin değilse ve TC'si varsa, UserMahalle tablosundan yetkisini kontrol et
+    if (tcNo && !isAdmin) {
+        const assignment = await queryOne<{ mahalle: string }>(
+            'SELECT mahalle FROM "UserMahalle" WHERE "tcNo" = $1',
+            [tcNo]
+        )
+        if (assignment) {
+            userMahalle = assignment.mahalle
+        }
+    }
 
     if (!userMahalle && !isAdmin) {
-        return <div>Mahalle bilgisi bulunamadı.</div>
+        return <div className="p-10 text-center text-red-600 font-semibold">Mahalle yetkisi bulunamadı. Lütfen yöneticinizle iletişime geçin.</div>
     }
 
     const { yargitay, cinsiyet, gorevi, mahalle, arama } = await searchParams
@@ -163,14 +176,26 @@ export default async function DashboardPage({
         <div className="space-y-6">
             {/* Admin Badge */}
             {isAdmin && (
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-4 text-white shadow-lg flex items-center gap-3">
-                    <div className="bg-white/20 p-2 rounded-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-4 text-white shadow-lg flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                        </div>
+                        <div>
+                            <span className="font-bold">Yönetici Modu</span>
+                            <span className="text-purple-200 ml-2 text-sm">Tam yetkili erişim</span>
+                        </div>
                     </div>
-                    <div>
-                        <span className="font-bold">Yönetici Modu</span>
-                        <span className="text-purple-200 ml-2 text-sm">Tüm mahallelere erişiminiz var</span>
-                    </div>
+                    {/* Kullanıcı Yönetimi Linki */}
+                    <Link
+                        href="/admin/users"
+                        className="bg-white border border-gray-200 rounded-xl p-4 text-gray-700 shadow-sm hover:shadow-md transition flex items-center gap-3 md:w-auto"
+                    >
+                        <div className="bg-gray-100 p-2 rounded-full text-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        </div>
+                        <span className="font-semibold">Kullanıcı Yetkilendirme</span>
+                    </Link>
                 </div>
             )}
 
@@ -470,4 +495,3 @@ export default async function DashboardPage({
         </div>
     )
 }
-
