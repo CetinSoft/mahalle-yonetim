@@ -119,6 +119,15 @@ export default async function DashboardPage() {
         eventInvitationCount = parseInt(invResult?.count || '0', 10)
     }
 
+    // Tüm etkinlikler
+    const allEvents = await query<{ id: string; title: string; date: Date; isActive: boolean; invitationCount: number }>(
+        `SELECT e.id, e.title, e.date, e."isActive", COALESCE(COUNT(i.id), 0)::int as "invitationCount"
+         FROM "Event" e
+         LEFT JOIN "Invitation" i ON i."eventId" = e.id
+         GROUP BY e.id
+         ORDER BY e.date DESC LIMIT 5`
+    )
+
     // Max for chart scaling
     const maxMahalleCount = mahalleStats.length > 0 ? Math.max(...mahalleStats.map(m => m.count)) : 1
 
@@ -251,8 +260,8 @@ export default async function DashboardPage() {
                             {yargitayStats.map((y) => (
                                 <div key={y.yargitayDurumu} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                                     <span className={`px-2 py-1 text-xs font-medium rounded ${y.yargitayDurumu === 'ONAMA' ? 'bg-red-100 text-red-700' :
-                                            y.yargitayDurumu === 'BOZMA' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-gray-100 text-gray-700'
+                                        y.yargitayDurumu === 'BOZMA' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-gray-100 text-gray-700'
                                         }`}>
                                         {y.yargitayDurumu}
                                     </span>
@@ -280,8 +289,8 @@ export default async function DashboardPage() {
                                         <div className="text-xs text-gray-500">{g.gorusmeYapan} • {new Date(g.gorusmeTarihi).toLocaleDateString('tr-TR')}</div>
                                     </div>
                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${g.sonuc === 'olumlu' ? 'bg-green-100 text-green-700' :
-                                            g.sonuc === 'olumsuz' ? 'bg-red-100 text-red-700' :
-                                                'bg-gray-100 text-gray-600'
+                                        g.sonuc === 'olumsuz' ? 'bg-red-100 text-red-700' :
+                                            'bg-gray-100 text-gray-600'
                                         }`}>
                                         {g.sonuc === 'olumlu' ? '✓ Olumlu' : g.sonuc === 'olumsuz' ? '✗ Olumsuz' : '? Belirsiz'}
                                     </span>
@@ -290,6 +299,34 @@ export default async function DashboardPage() {
                         </div>
                     ) : (
                         <p className="text-gray-400 text-sm">Henüz görüşme kaydı yok</p>
+                    )}
+                </div>
+
+                {/* Etkinlikler */}
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Etkinlikler</h3>
+                        {isAdmin && <Link href="/admin/events" className="text-sm text-blue-600 hover:underline">Yönet →</Link>}
+                    </div>
+                    {allEvents.length > 0 ? (
+                        <div className="space-y-3">
+                            {allEvents.map((e) => (
+                                <div key={e.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                                    <div>
+                                        <div className="font-medium text-gray-900 flex items-center gap-2">
+                                            {e.title}
+                                            {e.isActive && <span className="px-1.5 py-0.5 text-[10px] bg-green-100 text-green-700 rounded font-semibold">AKTİF</span>}
+                                        </div>
+                                        <div className="text-xs text-gray-500">{new Date(e.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                                    </div>
+                                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                                        {e.invitationCount} Davetli
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-400 text-sm">Henüz etkinlik yok</p>
                     )}
                 </div>
             </div>
