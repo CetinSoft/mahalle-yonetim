@@ -438,6 +438,7 @@ export default async function UyelerPage({
                             <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-3"><SortHeader label="Ad Soyad" column="ad" /></th>
+                                    <th className="px-6 py-3">Üye Durumu</th>
                                     <th className="px-6 py-3"><SortHeader label="Telefon" column="telefon" /></th>
                                     {isAdmin && !selectedMahalle && <th className="px-6 py-3"><SortHeader label="Mahalle" column="mahalle" /></th>}
                                     <th className="px-6 py-3"><SortHeader label="Yargıtay Bilgisi" column="yargitayDurumu" /></th>
@@ -450,7 +451,7 @@ export default async function UyelerPage({
                             <tbody className="divide-y divide-gray-100">
                                 {citizens.length === 0 ? (
                                     <tr>
-                                        <td colSpan={isAdmin && !selectedMahalle ? 8 : 7} className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan={isAdmin && !selectedMahalle ? 9 : 8} className="px-6 py-8 text-center text-gray-500">
                                             Kayıtlı üye bulunmamaktadır.
                                         </td>
                                     </tr>
@@ -458,23 +459,28 @@ export default async function UyelerPage({
                                     citizens.map((citizen) => {
                                         const invitedBy = invitationMap.get(citizen.id)
 
-                                        // Üye durumuna göre satır rengi belirle
+                                        // Üye durumuna göre badge rengi belirle
                                         const uyeDurumuLower = (citizen.uyeDurumu || '').toLowerCase()
-                                        let rowBgClass = 'bg-orange-50 hover:bg-orange-100' // Varsayılan: turuncu (diğerleri)
+                                        let badgeClass = 'bg-orange-100 text-orange-700 border-orange-200' // Varsayılan: turuncu
                                         if (uyeDurumuLower.includes('aktif') || uyeDurumuLower.includes('active')) {
-                                            rowBgClass = 'bg-green-50 hover:bg-green-100' // Aktif üye: yeşil
+                                            badgeClass = 'bg-green-100 text-green-700 border-green-200' // Aktif üye: yeşil
                                         } else if (uyeDurumuLower.includes('başka') || uyeDurumuLower.includes('baska') || uyeDurumuLower.includes('parti')) {
-                                            rowBgClass = 'bg-red-50 hover:bg-red-100' // Başka parti üyesi: kırmızı
+                                            badgeClass = 'bg-red-100 text-red-700 border-red-200' // Başka parti üyesi: kırmızı
                                         }
 
                                         return (
-                                            <tr key={citizen.id} className={`${rowBgClass} transition-all group`}>
+                                            <tr key={citizen.id} className="hover:bg-gray-50 transition-all group">
                                                 <td className="px-6 py-4 font-medium text-gray-900">
                                                     <a href={`/citizen/${citizen.id}`} className="block group-hover:text-blue-600 transition-colors">
                                                         <div className="flex flex-col">
                                                             <span className="text-base">{citizen.ad} {citizen.soyad}</span>
                                                         </div>
                                                     </a>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${badgeClass}`}>
+                                                        {citizen.uyeDurumu || 'Belirtilmemiş'}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {citizen.telefon ? (
