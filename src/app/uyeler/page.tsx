@@ -18,21 +18,27 @@ export default async function UyelerPage({
     const tcNo = session?.user?.image
     const isAdmin = isAdminTC(tcNo)
 
-    // Kullanıcının yetkili olduğu mahalleyi bul
-    let userMahalle = session?.user?.email
+    // Kullanıcının yetkili olduğu mahalleleri bul
+    let userMahalles: string[] = []
 
-    // Eğer admin değilse ve TC'si varsa, UserMahalle tablosundan yetkisini kontrol et
+    // Eğer admin değilse ve TC'si varsa, UserMahalle tablosundan TÜM yetkilerini kontrol et
     if (tcNo && !isAdmin) {
-        const assignment = await queryOne<{ mahalle: string }>(
+        const assignments = await query<{ mahalle: string }>(
             'SELECT mahalle FROM "UserMahalle" WHERE "tcNo" = $1',
             [tcNo]
         )
-        if (assignment) {
-            userMahalle = assignment.mahalle
+        userMahalles = assignments.map(a => a.mahalle)
+
+        // Ayrıca session'daki email (eski sistemden gelen mahalle) de ekle
+        if (session?.user?.email && !userMahalles.includes(session.user.email)) {
+            userMahalles.push(session.user.email)
         }
+    } else if (!isAdmin && session?.user?.email) {
+        // UserMahalle'de yoksa session'dan al
+        userMahalles = [session.user.email]
     }
 
-    if (!userMahalle && !isAdmin) {
+    if (userMahalles.length === 0 && !isAdmin) {
         return <div className="p-10 text-center text-red-600 font-semibold">Mahalle yetkisi bulunamadı. Lütfen yöneticinizle iletişime geçin.</div>
     }
 
@@ -45,8 +51,18 @@ export default async function UyelerPage({
     const validSortColumns = ['ad', 'soyad', 'uyeKayitTarihi', 'telefon', 'mahalle', 'yargitayDurumu', 'meslek', 'gorevi']
     const finalSortColumn = validSortColumns.includes(sortColumn) ? sortColumn : 'ad'
 
-    // Admin için mahalle seçimi, normal kullanıcı için kendi mahallesi
-    const selectedMahalle = isAdmin ? (mahalle || undefined) : userMahalle
+    // Admin için mahalle seçimi, normal kullanıcı için kendi mahalleleri
+    // Normal kullanıcı URL'den mahalle seçebilir ama sadece yetkili olduğu mahalleler arasından
+    let selectedMahalle: string | undefined = undefined
+    if (isAdmin) {
+        selectedMahalle = mahalle || undefined
+    } else {
+        // Normal kullanıcı: URL'den seçilen mahalle yetkili mahalleler arasında mı?
+        if (mahalle && userMahalles.includes(mahalle)) {
+            selectedMahalle = mahalle
+        }
+        // Eğer URL'den seçilmediyse veya yetkisizse, tüm yetkili mahalleleri göster
+    }
 
     // Default Cinsiyet to 'E' if not present
     const cinsiyetFilter = cinsiyet === 'all' ? undefined : (cinsiyet || 'E')
@@ -56,11 +72,27 @@ export default async function UyelerPage({
     const params: any[] = []
     let paramIndex = 1
 
-    // Mahalle filtresi - admin seçmezse tüm mahalleler, normal kullanıcı kendi mahallesi
-    if (selectedMahalle) {
-        whereClause = `WHERE "mahalle" = $${paramIndex}`
-        params.push(selectedMahalle)
-        paramIndex++
+    // Mahalle filtresi
+    if (isAdmin) {
+        // Admin: belirli bir mahalle seçtiyse filtrele
+        if (selectedMahalle) {
+            whereClause = `WHERE "mahalle" = $${paramIndex}`
+            params.push(selectedMahalle)
+            paramIndex++
+        }
+    } else {
+        // Normal kullanıcı: belirli bir mahalle seçtiyse onu, yoksa tüm yetkili mahalleleri göster
+        if (selectedMahalle) {
+            whereClause = `WHERE "mahalle" = $${paramIndex}`
+            params.push(selectedMahalle)
+            paramIndex++
+        } else if (userMahalles.length > 0) {
+            // Birden fazla mahalle için IN clause
+            const placeholders = userMahalles.map((_, i) => `$${paramIndex + i}`).join(', ')
+            whereClause = `WHERE "mahalle" IN (${placeholders})`
+            params.push(...userMahalles)
+            paramIndex += userMahalles.length
+        }
     }
 
     if (yargitay) {
@@ -228,7 +260,7 @@ export default async function UyelerPage({
     // Display title
     const displayTitle = isAdmin
         ? (selectedMahalle ? `${selectedMahalle} Mahallesi` : 'Tüm Mahalleler')
-        : `${userMahalle} Mahallesi`
+        : (selectedMahalle ? `${selectedMahalle} Mahallesi` : (userMahalles.length === 1 ? `${userMahalles[0]} Mahallesi` : `${userMahalles.length} Mahalle`))
 
     return (
         <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -315,8 +347,8 @@ export default async function UyelerPage({
 
 
                     <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                        {/* Mahalle Filter - Only for Admin */}
-                        {isAdmin && (
+                        {/* Mahalle Filter - Admin için tüm mahalleler, normal kullanıcı için yetkili mahalleler */}
+                        {isAdmin ? (
                             <>
                                 <div className="space-y-2">
                                     <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Mahalle</span>
@@ -338,7 +370,29 @@ export default async function UyelerPage({
                                 </div>
                                 <div className="w-px bg-gray-200 hidden md:block"></div>
                             </>
-                        )}
+                        ) : userMahalles.length > 1 ? (
+                            <>
+                                <div className="space-y-2">
+                                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Mahalle</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        <FilterButton
+                                            label="Tüm Mahallelerim"
+                                            active={!selectedMahalle}
+                                            href={buildFilterUrl({ mahalle: undefined })}
+                                        />
+                                        {userMahalles.map((m) => (
+                                            <FilterButton
+                                                key={m}
+                                                label={m}
+                                                active={selectedMahalle === m}
+                                                href={buildFilterUrl({ mahalle: m })}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="w-px bg-gray-200 hidden md:block"></div>
+                            </>
+                        ) : null}
 
                         <div className="space-y-2">
                             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cinsiyet / Medeni (Varsayılan E)</span>
