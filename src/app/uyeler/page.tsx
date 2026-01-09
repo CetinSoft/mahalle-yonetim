@@ -458,8 +458,17 @@ export default async function UyelerPage({
                                     citizens.map((citizen) => {
                                         const invitedBy = invitationMap.get(citizen.id)
 
+                                        // Üye durumuna göre satır rengi belirle
+                                        const uyeDurumuLower = (citizen.uyeDurumu || '').toLowerCase()
+                                        let rowBgClass = 'bg-orange-50 hover:bg-orange-100' // Varsayılan: turuncu (diğerleri)
+                                        if (uyeDurumuLower.includes('aktif') || uyeDurumuLower.includes('active')) {
+                                            rowBgClass = 'bg-green-50 hover:bg-green-100' // Aktif üye: yeşil
+                                        } else if (uyeDurumuLower.includes('başka') || uyeDurumuLower.includes('baska') || uyeDurumuLower.includes('parti')) {
+                                            rowBgClass = 'bg-red-50 hover:bg-red-100' // Başka parti üyesi: kırmızı
+                                        }
+
                                         return (
-                                            <tr key={citizen.id} className="hover:bg-gray-50 transition-all group">
+                                            <tr key={citizen.id} className={`${rowBgClass} transition-all group`}>
                                                 <td className="px-6 py-4 font-medium text-gray-900">
                                                     <a href={`/citizen/${citizen.id}`} className="block group-hover:text-blue-600 transition-colors">
                                                         <div className="flex flex-col">
