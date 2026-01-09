@@ -458,12 +458,12 @@ export default async function UyelerPage({
                                     citizens.map((citizen) => {
                                         const invitedBy = invitationMap.get(citizen.id)
 
-                                        // Üye durumuna göre Yargıtay badge rengi belirle
-                                        const uyeDurumuUpper = (citizen.uyeDurumu || '').toUpperCase()
+                                        // Yargıtay durumuna göre badge rengi belirle
+                                        const yargitayUpper = (citizen.yargitayDurumu || '').toUpperCase()
                                         let yargitayBadgeClass = 'bg-orange-100 text-orange-700 border-orange-200' // Varsayılan: turuncu
-                                        if (uyeDurumuUpper.includes('AKTİF') || uyeDurumuUpper.includes('AKTIF') || uyeDurumuUpper === 'AKTİF ÜYE' || uyeDurumuUpper === 'AKTIF UYE') {
+                                        if (yargitayUpper.includes('AKTİF') || yargitayUpper.includes('AKTIF') || yargitayUpper === 'AKTİF ÜYE' || yargitayUpper === 'AKTIF UYE') {
                                             yargitayBadgeClass = 'bg-green-100 text-green-700 border-green-200' // Aktif üye: yeşil
-                                        } else if (uyeDurumuUpper.includes('BAŞKA') || uyeDurumuUpper.includes('BASKA') || uyeDurumuUpper.includes('PARTİ') || uyeDurumuUpper.includes('PARTI')) {
+                                        } else if (yargitayUpper.includes('BAŞKA') || yargitayUpper.includes('BASKA') || yargitayUpper.includes('PARTİ') || yargitayUpper.includes('PARTI')) {
                                             yargitayBadgeClass = 'bg-red-100 text-red-700 border-red-200' // Başka parti üyesi: kırmızı
                                         }
 
