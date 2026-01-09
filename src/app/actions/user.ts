@@ -30,32 +30,40 @@ export async function assignUserMahalle(formData: FormData) {
     const { tcNo, mahalle } = validatedFields.data
 
     try {
-        // Önce kullanıcının zaten bir ataması var mı kontrol et (update or insert)
-        // TC'ye göre unique olduğu için ON CONFLICT kullanabiliriz
+        // Aynı TC ve mahalle kombinasyonu varsa ekleme yapma (unique kontrolü)
+        const existing = await queryOne<{ id: string }>(
+            `SELECT id FROM "UserMahalle" WHERE "tcNo" = $1 AND "mahalle" = $2`,
+            [tcNo, mahalle]
+        )
+
+        if (existing) {
+            return { success: false, message: 'Bu kullanıcı zaten bu mahalleye yetkili.' }
+        }
+
+        // Yeni yetki ekle (aynı TC için farklı mahalleler eklenebilir)
         await query(
             `INSERT INTO "UserMahalle" ("tcNo", "mahalle", "assignedBy")
-             VALUES ($1, $2, $3)
-             ON CONFLICT ("tcNo") 
-             DO UPDATE SET "mahalle" = $2, "assignedBy" = $3`,
+             VALUES ($1, $2, $3)`,
             [tcNo, mahalle, session.user.image]
         )
 
         revalidatePath('/admin/users')
-        return { success: true, message: 'Kullanıcı yetkisi güncellendi.' }
+        return { success: true, message: 'Kullanıcı yetkisi eklendi.' }
     } catch (error) {
         console.error('Mahalle atama hatası:', error)
         throw new Error('Veritabanı hatası oluştu.')
     }
 }
 
-export async function removeUserMahalle(tcNo: string) {
+export async function removeUserMahalle(tcNo: string, mahalle: string) {
     const session = await auth()
     if (!session?.user || !isAdminTC(session.user.image)) {
         throw new Error("Yetkisiz işlem")
     }
 
     try {
-        await query('DELETE FROM "UserMahalle" WHERE "tcNo" = $1', [tcNo])
+        // Belirli TC ve mahalle kombinasyonunu sil
+        await query('DELETE FROM "UserMahalle" WHERE "tcNo" = $1 AND "mahalle" = $2', [tcNo, mahalle])
         revalidatePath('/admin/users')
         return { success: true, message: 'Yetki kaldırıldı.' }
     } catch (error) {

@@ -127,7 +127,7 @@ export default async function AdminUsersPage() {
                                                 <td className="px-6 py-4 text-right">
                                                     <form action={async () => {
                                                         'use server'
-                                                        await removeUserMahalle(assignment.tcNo)
+                                                        await removeUserMahalle(assignment.tcNo, assignment.mahalle)
                                                     }}>
                                                         <button
                                                             type="submit"
