@@ -12,7 +12,7 @@ const PAGE_SIZE = 50
 export default async function UyelerPage({
     searchParams,
 }: {
-    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string; arama?: string; sayfa?: string }
+    searchParams: { yargitay?: string; cinsiyet?: string; gorevi?: string; mahalle?: string; arama?: string; sayfa?: string; siralama?: string; siraDir?: string }
 }) {
     const session = await auth()
     const tcNo = session?.user?.image
@@ -36,8 +36,14 @@ export default async function UyelerPage({
         return <div className="p-10 text-center text-red-600 font-semibold">Mahalle yetkisi bulunamadı. Lütfen yöneticinizle iletişime geçin.</div>
     }
 
-    const { yargitay, cinsiyet, gorevi, mahalle, arama, sayfa } = await searchParams
+    const { yargitay, cinsiyet, gorevi, mahalle, arama, sayfa, siralama, siraDir } = await searchParams
     const currentPage = Math.max(1, parseInt(sayfa || '1', 10) || 1)
+
+    // Sıralama ayarları
+    const sortColumn = siralama || 'ad'
+    const sortDirection = siraDir === 'desc' ? 'DESC' : 'ASC'
+    const validSortColumns = ['ad', 'soyad', 'uyeKayitTarihi', 'telefon', 'mahalle', 'yargitayDurumu', 'meslek', 'gorevi']
+    const finalSortColumn = validSortColumns.includes(sortColumn) ? sortColumn : 'ad'
 
     // Admin için mahalle seçimi, normal kullanıcı için kendi mahallesi
     const selectedMahalle = isAdmin ? (mahalle || undefined) : userMahalle
@@ -98,7 +104,7 @@ export default async function UyelerPage({
     // Sayfalama ile veri çek
     const offset = (currentPage - 1) * PAGE_SIZE
     const citizens = await query<Citizen>(
-        `SELECT * FROM "Citizen" ${whereClause} ORDER BY "ad" ASC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+        `SELECT * FROM "Citizen" ${whereClause} ORDER BY "${finalSortColumn}" ${sortDirection} NULLS LAST LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
         params
     )
 
@@ -169,6 +175,8 @@ export default async function UyelerPage({
             gorevi: goreviFilter,
             mahalle: selectedMahalle,
             arama: arama,
+            siralama: siralama,
+            siraDir: siraDir,
         }
         const merged = { ...current, ...overrides }
         const parts: string[] = []
@@ -177,6 +185,8 @@ export default async function UyelerPage({
         if (merged.gorevi) parts.push(`gorevi=${merged.gorevi}`)
         if (merged.mahalle && isAdmin) parts.push(`mahalle=${merged.mahalle}`)
         if (merged.arama) parts.push(`arama=${encodeURIComponent(merged.arama)}`)
+        if (merged.siralama) parts.push(`siralama=${merged.siralama}`)
+        if (merged.siraDir) parts.push(`siraDir=${merged.siraDir}`)
         return `?${parts.join('&')}`
     }
 
@@ -188,9 +198,32 @@ export default async function UyelerPage({
         if (goreviFilter) parts.push(`gorevi=${goreviFilter}`)
         if (selectedMahalle && isAdmin) parts.push(`mahalle=${selectedMahalle}`)
         if (arama) parts.push(`arama=${encodeURIComponent(arama)}`)
+        if (siralama) parts.push(`siralama=${siralama}`)
+        if (siraDir) parts.push(`siraDir=${siraDir}`)
         parts.push(`sayfa=${page}`)
         return `?${parts.join('&')}`
     }
+
+    // Build sort URL helper
+    const buildSortUrl = (column: string) => {
+        const newDir = (siralama === column && siraDir === 'asc') ? 'desc' : 'asc'
+        return buildFilterUrl({ siralama: column, siraDir: newDir })
+    }
+
+    // Sort indicator component
+    const SortHeader = ({ label, column }: { label: string; column: string }) => (
+        <Link
+            href={buildSortUrl(column)}
+            className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+        >
+            {label}
+            {siralama === column && (
+                <span className="text-blue-600">
+                    {siraDir === 'desc' ? '↓' : '↑'}
+                </span>
+            )}
+        </Link>
+    )
 
     // Display title
     const displayTitle = isAdmin
@@ -248,7 +281,7 @@ export default async function UyelerPage({
                         <div className="flex items-center gap-3">
                             {/* Dashboard linki */}
                             <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:underline">
-                                🏠 Dashboard
+                                🏠 Dashboard (Anasayfa)
                             </Link>
                             {/* Görüşmeler linki - herkes görebilir */}
                             <Link href="/gorusmeler" className="text-sm font-medium text-purple-600 hover:underline">
@@ -404,19 +437,20 @@ export default async function UyelerPage({
                         <table className="w-full text-sm text-left">
                             <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                                 <tr>
-                                    <th className="px-6 py-3">Ad Soyad</th>
-                                    <th className="px-6 py-3">Telefon</th>
-                                    {isAdmin && !selectedMahalle && <th className="px-6 py-3">Mahalle</th>}
-                                    <th className="px-6 py-3">Yargıtay Bilgisi</th>
-                                    <th className="px-6 py-3">Meslek</th>
-                                    <th className="px-6 py-3">Görevi</th>
+                                    <th className="px-6 py-3"><SortHeader label="Ad Soyad" column="ad" /></th>
+                                    <th className="px-6 py-3"><SortHeader label="Telefon" column="telefon" /></th>
+                                    {isAdmin && !selectedMahalle && <th className="px-6 py-3"><SortHeader label="Mahalle" column="mahalle" /></th>}
+                                    <th className="px-6 py-3"><SortHeader label="Yargıtay Bilgisi" column="yargitayDurumu" /></th>
+                                    <th className="px-6 py-3"><SortHeader label="Meslek" column="meslek" /></th>
+                                    <th className="px-6 py-3"><SortHeader label="Görevi" column="gorevi" /></th>
+                                    <th className="px-6 py-3"><SortHeader label="Kayıt Tarihi" column="uyeKayitTarihi" /></th>
                                     <th className="px-6 py-3 text-right">İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {citizens.length === 0 ? (
                                     <tr>
-                                        <td colSpan={isAdmin && !selectedMahalle ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan={isAdmin && !selectedMahalle ? 8 : 7} className="px-6 py-8 text-center text-gray-500">
                                             Kayıtlı üye bulunmamaktadır.
                                         </td>
                                     </tr>
@@ -468,6 +502,15 @@ export default async function UyelerPage({
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-600">
                                                     {citizen.gorevi || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600">
+                                                    {citizen.uyeKayitTarihi ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                                            {citizen.uyeKayitTarihi}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-300">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
