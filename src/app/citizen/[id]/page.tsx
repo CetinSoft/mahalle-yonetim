@@ -1,7 +1,8 @@
-import { auth } from "@/auth"
+import { auth, signOut } from "@/auth"
 import { queryOne, query, Citizen, Gorusme } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowLeft, User, Phone, MapPin, Briefcase, Calendar, Info, Heart, MessageCircle } from "lucide-react"
+import { ArrowLeft, User, Phone, MapPin, Briefcase, Calendar, Info, Heart, MessageCircle, LogOut } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import GorusmeForm from "@/components/GorusmeForm"
@@ -76,6 +77,17 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
                             {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Mahalle Belirsiz"})</span>
                         </span>
                     </div>
+                    <form
+                        action={async () => {
+                            "use server"
+                            await signOut({ redirectTo: "/login" })
+                        }}
+                    >
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Çıkış
+                        </Button>
+                    </form>
                 </div>
             </header>
 

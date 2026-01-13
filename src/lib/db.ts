@@ -119,3 +119,35 @@ export interface GorusmeWithCitizen extends Gorusme {
     citizenSoyad: string
 }
 
+// Faaliyet Planlama Takvimi
+export interface Faaliyet {
+    id: string
+    konu: string
+    icerik: string | null
+    tarih: Date
+    saat: string | null
+    konum: string | null
+    gorevli: string | null
+    ilce: string
+    olusturanTc: string
+    createdAt: Date
+    updatedAt: Date
+}
+
+export interface FaaliyetKatilimci {
+    id: string
+    faaliyetId: string
+    citizenId: string
+    ekleyenTc: string
+    createdAt: Date
+}
+
+export interface FaaliyetWithKatilimcilar extends Faaliyet {
+    katilimcilar: {
+        id: string
+        citizenId: string
+        ad: string
+        soyad: string
+    }[]
+}
+

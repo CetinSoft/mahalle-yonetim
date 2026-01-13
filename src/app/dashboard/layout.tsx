@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/auth"
 import { Button } from "@/components/ui/button"
-import { LogOut, User } from "lucide-react"
+import { LogOut, Calendar } from "lucide-react"
+import Link from "next/link"
 
 export default async function DashboardLayout({
     children,
@@ -24,17 +25,23 @@ export default async function DashboardLayout({
                             {session?.user?.name || "Kullanıcı Paneli"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Mahalle Belirsiz"})</span>
                         </span>
                     </div>
-                    <form
-                        action={async () => {
-                            "use server"
-                            await signOut({ redirectTo: "/login" })
-                        }}
-                    >
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Çıkış
-                        </Button>
-                    </form>
+                    <div className="flex items-center gap-3">
+                        <Link href="/takvim" className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                            <Calendar className="h-4 w-4" />
+                            Takvim
+                        </Link>
+                        <form
+                            action={async () => {
+                                "use server"
+                                await signOut({ redirectTo: "/login" })
+                            }}
+                        >
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                <LogOut className="h-4 w-4 mr-2" />
+                                Çıkış
+                            </Button>
+                        </form>
+                    </div>
                 </div>
             </header>
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -1,7 +1,9 @@
-import { auth } from "@/auth"
+import { auth, signOut } from "@/auth"
 import { query, queryOne, Citizen, Event } from "@/lib/db"
 import { isAdminTC, getUserIlces, getDistrictMahalles } from "@/lib/admin"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { LogOut } from "lucide-react"
 
 interface EventWithInvitations extends Event {
     invitations: { citizenId: string; invitedBy: string }[]
@@ -293,6 +295,17 @@ export default async function UyelerPage({
                             {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Mahalle Belirsiz"})</span>
                         </span>
                     </div>
+                    <form
+                        action={async () => {
+                            "use server"
+                            await signOut({ redirectTo: "/login" })
+                        }}
+                    >
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Çıkış
+                        </Button>
+                    </form>
                 </div>
             </header>
 

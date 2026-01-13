@@ -1,7 +1,10 @@
-import { auth } from "@/auth"
+import { auth, signOut } from "@/auth"
 import { query, queryOne, Gorusme, Citizen } from "@/lib/db"
-import { isAdminTC } from "@/lib/admin"
+import { isAdminTC, getUserIlces } from "@/lib/admin"
 import Link from "next/link"
+import { Calendar, Phone, MapPin, Search, ArrowUpDown, Filter, X, LogOut } from "lucide-react"
+import { Button } from "@/components/ui/button"
+
 
 interface GorusmeWithCitizen extends Gorusme {
     citizenAd: string
@@ -49,24 +52,24 @@ export default async function GorusmelerPage({
 
     // Normal kullanıcılar sadece kendi yaptıkları görüşmeleri görür
     if (!isAdmin) {
-        whereClause = `WHERE g."gorusmeYapan" = $${paramIndex}`
+        whereClause = `WHERE g."gorusmeYapan" = $${paramIndex} `
         params.push(userName)
         paramIndex++
     } else if (selectedMahalle) {
-        whereClause = `WHERE c."mahalle" = $${paramIndex}`
+        whereClause = `WHERE c."mahalle" = $${paramIndex} `
         params.push(selectedMahalle)
         paramIndex++
     }
 
     if (sonuc && sonuc !== 'all') {
-        whereClause += (whereClause ? ' AND' : 'WHERE') + ` g.sonuc = $${paramIndex}`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` g.sonuc = $${paramIndex} `
         params.push(sonuc)
         paramIndex++
     }
 
     if (arama && arama.trim()) {
         whereClause += (whereClause ? ' AND' : 'WHERE') + ` (c."ad" ILIKE $${paramIndex} OR c."soyad" ILIKE $${paramIndex} OR g."gorusmeYapan" ILIKE $${paramIndex} OR g."aciklama" ILIKE $${paramIndex})`
-        params.push(`%${arama.trim()}%`)
+        params.push(`% ${arama.trim()}% `)
         paramIndex++
     }
 
@@ -114,10 +117,10 @@ export default async function GorusmelerPage({
         const current = { mahalle: selectedMahalle, sonuc, arama }
         const merged = { ...current, ...overrides }
         const parts: string[] = []
-        if (merged.mahalle && isAdmin) parts.push(`mahalle=${merged.mahalle}`)
-        if (merged.sonuc) parts.push(`sonuc=${merged.sonuc}`)
-        if (merged.arama) parts.push(`arama=${encodeURIComponent(merged.arama)}`)
-        return `/gorusmeler${parts.length ? '?' + parts.join('&') : ''}`
+        if (merged.mahalle && isAdmin) parts.push(`mahalle = ${merged.mahalle} `)
+        if (merged.sonuc) parts.push(`sonuc = ${merged.sonuc} `)
+        if (merged.arama) parts.push(`arama = ${encodeURIComponent(merged.arama)} `)
+        return `/ gorusmeler${parts.length ? '?' + parts.join('&') : ''} `
     }
 
     return (
@@ -138,6 +141,17 @@ export default async function GorusmelerPage({
                             {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Mahalle Belirsiz"})</span>
                         </span>
                     </div>
+                    <form
+                        action={async () => {
+                            "use server"
+                            await signOut({ redirectTo: "/login" })
+                        }}
+                    >
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Çıkış
+                        </Button>
+                    </form>
                 </div>
             </header>
 
@@ -159,7 +173,7 @@ export default async function GorusmelerPage({
                         </div>
                         {/* Excel Export Button */}
                         <a
-                            href={`/api/export/gorusmeler?${new URLSearchParams({
+                            href={`/ api /export/gorusmeler?${new URLSearchParams({
                                 ...(selectedMahalle && isAdmin && { mahalle: selectedMahalle }),
                                 ...(sonuc && { sonuc }),
                                 ...(arama && { arama }),
@@ -201,16 +215,16 @@ export default async function GorusmelerPage({
                     <div className="space-y-1">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sonuç</span>
                         <div className="flex gap-2">
-                            <Link href={buildUrl({ sonuc: undefined })} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${!sonuc || sonuc === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'}`}>
+                            <Link href={buildUrl({ sonuc: undefined })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${!sonuc || sonuc === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'} `}>
                                 Tümü
                             </Link>
-                            <Link href={buildUrl({ sonuc: 'olumlu' })} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${sonuc === 'olumlu' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400'}`}>
+                            <Link href={buildUrl({ sonuc: 'olumlu' })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${sonuc === 'olumlu' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400'} `}>
                                 Olumlu
                             </Link>
-                            <Link href={buildUrl({ sonuc: 'olumsuz' })} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${sonuc === 'olumsuz' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200 hover:border-red-400'}`}>
+                            <Link href={buildUrl({ sonuc: 'olumsuz' })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${sonuc === 'olumsuz' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200 hover:border-red-400'} `}>
                                 Olumsuz
                             </Link>
-                            <Link href={buildUrl({ sonuc: 'belirsiz' })} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${sonuc === 'belirsiz' ? 'bg-gray-600 text-white border-gray-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+                            <Link href={buildUrl({ sonuc: 'belirsiz' })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${sonuc === 'belirsiz' ? 'bg-gray-600 text-white border-gray-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'} `}>
                                 Belirsiz
                             </Link>
                         </div>
@@ -223,11 +237,11 @@ export default async function GorusmelerPage({
                             <div className="space-y-1">
                                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Mahalle</span>
                                 <div className="flex flex-wrap gap-2">
-                                    <Link href={buildUrl({ mahalle: undefined })} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${!selectedMahalle ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'}`}>
+                                    <Link href={buildUrl({ mahalle: undefined })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${!selectedMahalle ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'} `}>
                                         Tümü
                                     </Link>
                                     {mahalleOptions.map(m => (
-                                        <Link key={m} href={buildUrl({ mahalle: m })} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedMahalle === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'}`}>
+                                        <Link key={m} href={buildUrl({ mahalle: m })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${selectedMahalle === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'} `}>
                                             {m}
                                         </Link>
                                     ))}
@@ -263,7 +277,7 @@ export default async function GorusmelerPage({
                                     gorusmeler.map((g) => (
                                         <tr key={g.id} className="hover:bg-gray-50/80 transition-all">
                                             <td className="px-6 py-4">
-                                                <Link href={`/citizen/${g.citizenId}`} className="font-medium text-gray-900 hover:text-blue-600 transition">
+                                                <Link href={`/ citizen / ${g.citizenId} `} className="font-medium text-gray-900 hover:text-blue-600 transition">
                                                     {g.citizenAd} {g.citizenSoyad}
                                                 </Link>
                                             </td>
@@ -276,12 +290,12 @@ export default async function GorusmelerPage({
                                             )}
                                             <td className="px-6 py-4">
                                                 {g.citizenYargitayDurumu ? (
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${(g.citizenYargitayDurumu.toUpperCase().includes('AKTİF') || g.citizenYargitayDurumu.toUpperCase().includes('AKTIF'))
+                                                    <span className={`inline - flex items - center px - 2 py - 0.5 rounded - full text - xs font - medium border ${(g.citizenYargitayDurumu.toUpperCase().includes('AKTİF') || g.citizenYargitayDurumu.toUpperCase().includes('AKTIF'))
                                                         ? 'bg-green-100 text-green-700 border-green-200'
                                                         : (g.citizenYargitayDurumu.toUpperCase().includes('BAŞKA') || g.citizenYargitayDurumu.toUpperCase().includes('BASKA') || g.citizenYargitayDurumu.toUpperCase().includes('PARTİ'))
                                                             ? 'bg-red-100 text-red-700 border-red-200'
                                                             : 'bg-orange-100 text-orange-700 border-orange-200'
-                                                        }`}>
+                                                        } `}>
                                                         {g.citizenYargitayDurumu}
                                                     </span>
                                                 ) : (
@@ -295,7 +309,7 @@ export default async function GorusmelerPage({
                                                 {new Date(g.gorusmeTarihi).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getSonucStyle(g.sonuc)}`}>
+                                                <span className={`inline - flex items - center px - 2.5 py - 1 rounded - full text - xs font - medium border ${getSonucStyle(g.sonuc)} `}>
                                                     {getSonucLabel(g.sonuc)}
                                                 </span>
                                             </td>
