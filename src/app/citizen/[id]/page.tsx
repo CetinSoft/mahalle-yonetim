@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import GorusmeForm from "@/components/GorusmeForm"
+import { formatPhoneNumber } from "@/lib/utils"
 
 export default async function CitizenDetailPage({ params, searchParams }: { params: { id: string }, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const session = await auth()
@@ -123,9 +124,9 @@ export default async function CitizenDetailPage({ params, searchParams }: { para
                         <CardContent className="space-y-4 pt-4 border-t border-gray-100">
                             <div className="flex flex-col gap-3">
                                 {citizen.telefon && (
-                                    <a href={`tel:${citizen.telefon}`} className="flex items-center justify-center gap-2 w-full py-2 bg-green-50 text-green-700 hover:bg-green-100 rounded-md font-medium transition-colors">
+                                    <a href={`tel:${formatPhoneNumber(citizen.telefon)}`} className="flex items-center justify-center gap-2 w-full py-2 bg-green-50 text-green-700 hover:bg-green-100 rounded-md font-medium transition-colors">
                                         <Phone size={16} />
-                                        Ara: {citizen.telefon}
+                                        Ara: {formatPhoneNumber(citizen.telefon)}
                                     </a>
                                 )}
                                 <div className={`text-center px-3 py-1 rounded-full text-xs font-bold border ${citizen.yargitayDurumu?.includes('AKTİF') ? 'bg-green-50 text-green-700 border-green-200' :
