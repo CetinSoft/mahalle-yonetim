@@ -539,11 +539,11 @@ export default async function UyelerPage({
                                     <tr>
                                         <th className="px-6 py-3"><SortHeader label="Ad Soyad" column="ad" /></th>
                                         <th className="px-6 py-3"><SortHeader label="Telefon" column="telefon" /></th>
-                                        {isSuperAdmin && !selectedMahalle && <th className="px-6 py-3"><SortHeader label="Mahalle" column="mahalle" /></th>}
-                                        <th className="px-6 py-3"><SortHeader label="Yargıtay Bilgisi" column="yargitayDurumu" /></th>
-                                        <th className="px-6 py-3"><SortHeader label="Meslek" column="meslek" /></th>
-                                        <th className="px-6 py-3"><SortHeader label="Görevi" column="gorevi" /></th>
-                                        <th className="px-6 py-3"><SortHeader label="Kayıt Tarihi" column="uyeKayitTarihi" /></th>
+                                        {isSuperAdmin && !selectedMahalle && <th className="px-6 py-3 hidden md:table-cell"><SortHeader label="Mahalle" column="mahalle" /></th>}
+                                        <th className="px-6 py-3 hidden md:table-cell"><SortHeader label="Yargıtay Bilgisi" column="yargitayDurumu" /></th>
+                                        <th className="px-6 py-3 hidden md:table-cell"><SortHeader label="Meslek" column="meslek" /></th>
+                                        <th className="px-6 py-3 hidden md:table-cell"><SortHeader label="Görevi" column="gorevi" /></th>
+                                        <th className="px-6 py-3 hidden md:table-cell"><SortHeader label="Kayıt Tarihi" column="uyeKayitTarihi" /></th>
                                         <th className="px-6 py-3 text-right">İşlemler</th>
                                     </tr>
                                 </thead>
@@ -590,35 +590,33 @@ export default async function UyelerPage({
                                                         )}
                                                     </td>
                                                     {isSuperAdmin && !selectedMahalle && (
-                                                        <td className="px-6 py-4 text-gray-600">
+                                                        <td className="px-6 py-4 text-gray-600 hidden md:table-cell">
                                                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
                                                                 {citizen.mahalle}
                                                             </span>
                                                         </td>
                                                     )}
-                                                    <td className="px-6 py-4 text-gray-600">
+                                                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">
                                                         {citizen.yargitayDurumu ? (
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${yargitayBadgeClass}`}>
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${yargitayBadgeClass}`}>
                                                                 {citizen.yargitayDurumu}
                                                             </span>
                                                         ) : (
-                                                            <span className="text-gray-300">-</span>
+                                                            <span className="text-gray-400 italic">-</span>
                                                         )}
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-600">
-                                                        {citizen.meslek || '-'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600">
-                                                        {citizen.gorevi || '-'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600">
-                                                        {citizen.uyeKayitTarihi ? (
+                                                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">{citizen.meslek || '-'}</td>
+                                                    <td className="px-6 py-4 text-gray-600 hidden md:table-cell">
+                                                        {citizen.gorevi ? (
                                                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                                                                {citizen.uyeKayitTarihi}
+                                                                {citizen.gorevi}
                                                             </span>
                                                         ) : (
-                                                            <span className="text-gray-300">-</span>
+                                                            <span className="text-gray-400 italic">-</span>
                                                         )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-gray-500 text-xs hidden md:table-cell">
+                                                        {citizen.uyeKayitTarihi ? new Date(citizen.uyeKayitTarihi).toLocaleDateString('tr-TR') : '-'}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <div className="flex items-center justify-end gap-2">

@@ -258,12 +258,12 @@ export default async function GorusmelerPage({
                             <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-3">Görüşülen Kişi</th>
-                                    {isAdmin && !selectedMahalle && <th className="px-6 py-3">Mahalle</th>}
-                                    <th className="px-6 py-3">Yargıtay</th>
-                                    <th className="px-6 py-3">Görüşmeyi Yapan</th>
+                                    {isAdmin && !selectedMahalle && <th className="px-6 py-3 hidden md:table-cell">Mahalle</th>}
+                                    <th className="px-6 py-3 hidden md:table-cell">Yargıtay</th>
+                                    <th className="px-6 py-3 hidden md:table-cell">Görüşmeyi Yapan</th>
                                     <th className="px-6 py-3">Tarih</th>
                                     <th className="px-6 py-3">Sonuç</th>
-                                    <th className="px-6 py-3">Açıklama</th>
+                                    <th className="px-6 py-3 hidden md:table-cell">Açıklama</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -282,39 +282,40 @@ export default async function GorusmelerPage({
                                                 </Link>
                                             </td>
                                             {isAdmin && !selectedMahalle && (
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 hidden md:table-cell">
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
                                                         {g.citizenMahalle}
                                                     </span>
                                                 </td>
                                             )}
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 hidden md:table-cell">
                                                 {g.citizenYargitayDurumu ? (
-                                                    <span className={`inline - flex items - center px - 2 py - 0.5 rounded - full text - xs font - medium border ${(g.citizenYargitayDurumu.toUpperCase().includes('AKTİF') || g.citizenYargitayDurumu.toUpperCase().includes('AKTIF'))
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${(g.citizenYargitayDurumu.toUpperCase().includes('AKTİF') || g.citizenYargitayDurumu.toUpperCase().includes('AKTIF'))
                                                         ? 'bg-green-100 text-green-700 border-green-200'
                                                         : (g.citizenYargitayDurumu.toUpperCase().includes('BAŞKA') || g.citizenYargitayDurumu.toUpperCase().includes('BASKA') || g.citizenYargitayDurumu.toUpperCase().includes('PARTİ'))
                                                             ? 'bg-red-100 text-red-700 border-red-200'
                                                             : 'bg-orange-100 text-orange-700 border-orange-200'
-                                                        } `}>
+                                                        }`}>
                                                         {g.citizenYargitayDurumu}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-gray-300">-</span>
+                                                    <span className="text-gray-400 italic">-</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-gray-600">
-                                                {g.gorusmeYapan}
+                                            <td className="px-6 py-4 text-gray-600 hidden md:table-cell">
+                                                {g.gorusmeYapan || 'Bilinmiyor'}
                                             </td>
-                                            <td className="px-6 py-4 text-gray-600">
-                                                {new Date(g.gorusmeTarihi).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                            <td className="px-6 py-4 text-gray-500 text-xs whitespace-nowrap">
+                                                {new Date(g.gorusmeTarihi).toLocaleDateString('tr-TR')}
+                                                <div className="text-gray-400 text-[10px]">{new Date(g.gorusmeTarihi).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline - flex items - center px - 2.5 py - 1 rounded - full text - xs font - medium border ${getSonucStyle(g.sonuc)} `}>
-                                                    {getSonucLabel(g.sonuc)}
+                                                <span className={getSonucStyle(g.sonuc)}>
+                                                    {g.sonuc === 'olumlu' ? 'Olumlu' : g.sonuc === 'olumsuz' ? 'Olumsuz' : 'Belirsiz'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-gray-600 max-w-xs truncate" title={g.aciklama}>
-                                                {g.aciklama}
+                                            <td className="px-6 py-4 text-gray-600 truncate max-w-[200px] hidden md:table-cell" title={g.aciklama || ''}>
+                                                {g.aciklama || '-'}
                                             </td>
                                         </tr>
                                     ))

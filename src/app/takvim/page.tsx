@@ -242,56 +242,61 @@ export default async function TakvimPage({
                             </Link>
                         </div>
 
-                        {/* Gün Başlıkları */}
-                        <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
-                            {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
-                                <div key={day} className="px-2 py-3 text-center text-sm font-semibold text-gray-600">{day}</div>
-                            ))}
-                        </div>
+                        {/* Takvim Grid Scroll Container */}
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[900px]"> {/* Mobilde sıkışmaması için min-width */}
+                                {/* Gün Başlıkları */}
+                                <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+                                    {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
+                                        <div key={day} className="px-2 py-3 text-center text-sm font-semibold text-gray-600 border-r last:border-r-0 border-gray-100">{day}</div>
+                                    ))}
+                                </div>
 
-                        {/* Takvim Günleri */}
-                        <div className="grid grid-cols-7">
-                            {calendarDays.map((day, idx) => {
-                                const dateKey = day.date.toISOString().split('T')[0]
-                                const dayFaaliyetler = faaliyetMap[dateKey] || []
-                                const isToday = dateKey === today
+                                {/* Takvim Günleri */}
+                                <div className="grid grid-cols-7">
+                                    {calendarDays.map((day, idx) => {
+                                        const dateKey = day.date.toISOString().split('T')[0]
+                                        const dayFaaliyetler = faaliyetMap[dateKey] || []
+                                        const isToday = dateKey === today
 
-                                return (
-                                    <div
-                                        key={idx}
-                                        className={`min-h-[120px] border-b border-r border-gray-200 p-2 ${!day.isCurrentMonth ? 'bg-gray-50/80' : 'bg-white'} ${isToday ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''}`}
-                                    >
-                                        <div className={`text-base font-bold mb-2 ${!day.isCurrentMonth ? 'text-gray-400' : 'text-gray-800'} ${isToday ? 'text-blue-700' : ''}`}>
-                                            {day.date.getDate()}
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            {dayFaaliyetler.slice(0, 2).map(f => (
-                                                <div key={f.id} className="group relative">
-                                                    <Link
-                                                        href={`/takvim/${f.id}`}
-                                                        className="block px-2 py-1.5 text-sm bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-md shadow-sm hover:from-blue-600 hover:to-indigo-600 transition"
-                                                    >
-                                                        <div className="font-semibold truncate">{f.konu}</div>
-                                                        {f.saat && <div className="text-xs text-blue-100 mt-0.5">🕐 {f.saat.slice(0, 5)}</div>}
-                                                    </Link>
-                                                    {/* Tooltip Balonu */}
-                                                    <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                                                        <div className="font-bold text-base mb-2">{f.konu}</div>
-                                                        {f.konum && <div className="flex items-center gap-2 mb-1"><span className="text-blue-300">📍</span> {f.konum}</div>}
-                                                        {f.saat && <div className="flex items-center gap-2 mb-1"><span className="text-yellow-300">🕐</span> {f.saat}</div>}
-                                                        {f.gorevli && <div className="flex items-center gap-2"><span className="text-green-300">👤</span> {f.gorevli}</div>}
-                                                        {!f.konum && !f.gorevli && !f.saat && <div className="text-gray-400 text-xs">Detay için tıklayın</div>}
-                                                        <div className="absolute left-4 -bottom-2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
-                                                    </div>
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`min-h-[120px] border-b border-r border-gray-200 p-2 ${!day.isCurrentMonth ? 'bg-gray-50/80' : 'bg-white'} ${isToday ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''}`}
+                                            >
+                                                <div className={`text-base font-bold mb-2 ${!day.isCurrentMonth ? 'text-gray-400' : 'text-gray-800'} ${isToday ? 'text-blue-700' : ''}`}>
+                                                    {day.date.getDate()}
                                                 </div>
-                                            ))}
-                                            {dayFaaliyetler.length > 2 && (
-                                                <div className="text-sm font-medium text-blue-600 px-2">+{dayFaaliyetler.length - 2} faaliyet daha</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                                                <div className="space-y-1.5">
+                                                    {dayFaaliyetler.slice(0, 2).map(f => (
+                                                        <div key={f.id} className="group relative">
+                                                            <Link
+                                                                href={`/takvim/${f.id}`}
+                                                                className="block px-2 py-1.5 text-sm bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-md shadow-sm hover:from-blue-600 hover:to-indigo-600 transition"
+                                                            >
+                                                                <div className="font-semibold truncate">{f.konu}</div>
+                                                                {f.saat && <div className="text-xs text-blue-100 mt-0.5">🕐 {f.saat.slice(0, 5)}</div>}
+                                                            </Link>
+                                                            {/* Tooltip Balonu */}
+                                                            <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                                                                <div className="font-bold text-base mb-2">{f.konu}</div>
+                                                                {f.konum && <div className="flex items-center gap-2 mb-1"><span className="text-blue-300">📍</span> {f.konum}</div>}
+                                                                {f.saat && <div className="flex items-center gap-2 mb-1"><span className="text-yellow-300">🕐</span> {f.saat}</div>}
+                                                                {f.gorevli && <div className="flex items-center gap-2"><span className="text-green-300">👤</span> {f.gorevli}</div>}
+                                                                {!f.konum && !f.gorevli && !f.saat && <div className="text-gray-400 text-xs">Detay için tıklayın</div>}
+                                                                <div className="absolute left-4 -bottom-2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    {dayFaaliyetler.length > 2 && (
+                                                        <div className="text-sm font-medium text-blue-600 px-2">+{dayFaaliyetler.length - 2} faaliyet daha</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ) : (
