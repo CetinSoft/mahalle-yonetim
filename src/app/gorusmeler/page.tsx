@@ -133,25 +133,31 @@ export default async function GorusmelerPage({
                             <img
                                 src="/muyet-logo.png"
                                 alt="MUYET"
-                                className="h-12 w-auto"
+                                className="h-8 md:h-12 w-auto"
                             />
                         </Link>
-                        <div className="h-8 w-px bg-gray-200"></div>
-                        <span className="font-bold text-lg text-gray-800 tracking-tight">
-                            {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Mahalle Belirsiz"})</span>
+                        <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
+                        <span className="font-bold text-sm md:text-lg text-gray-800 tracking-tight">
+                            {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2 hidden md:inline">({session?.user?.email || "Mahalle Belirsiz"})</span>
                         </span>
                     </div>
-                    <form
-                        action={async () => {
-                            "use server"
-                            await signOut({ redirectTo: "/login" })
-                        }}
-                    >
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Çıkış
-                        </Button>
-                    </form>
+                    <div className="flex items-center gap-3">
+                        <Link href="/takvim" className="flex items-center gap-2 px-2 md:px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                            <Calendar className="h-4 w-4" />
+                            <span className="hidden md:inline">Takvim</span>
+                        </Link>
+                        <form
+                            action={async () => {
+                                "use server"
+                                await signOut({ redirectTo: "/login" })
+                            }}
+                        >
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                <LogOut className="h-4 w-4 md:mr-2" />
+                                <span className="hidden md:inline">Çıkış</span>
+                            </Button>
+                        </form>
+                    </div>
                 </div>
             </header>
 

@@ -135,35 +135,29 @@ export default async function TakvimPage({
 
             <div className="container mx-auto py-8 px-4 max-w-7xl space-y-6">
                 {/* Başlık */}
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                            <Calendar className="h-8 w-8 text-blue-600" />
-                            Faaliyet Planlama Takvimi
-                        </h1>
-                        <p className="text-gray-500 mt-1">
-                            {isSuperAdmin ? 'Tüm ilçelerin faaliyetleri' : `${userIlce || userIlces.join(', ')} ilçesi faaliyetleri`}
-                        </p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Takvim</h1>
+                        <p className="text-gray-500 mt-1 text-sm md:text-base">Müdürlük ve mahalle faaliyetlerini takip edin</p>
                     </div>
-                    <div className="flex gap-3">
-                        {/* Görünüm Seçimi */}
-                        <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden w-full sm:w-auto">
                             <Link
                                 href={`/takvim?ay=${currentMonth}&yil=${currentYear}&gorunum=aylik`}
-                                className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'aylik' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                                className={`flex-1 sm:flex-none justify-center px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'aylik' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
                             >
                                 <Grid3X3 className="h-4 w-4" />
                                 Aylık
                             </Link>
                             <Link
                                 href={`/takvim?gorunum=liste`}
-                                className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'liste' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                                className={`flex-1 sm:flex-none justify-center px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'liste' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
                             >
                                 <List className="h-4 w-4" />
                                 Liste
                             </Link>
                         </div>
-                        <Link href="/dashboard" className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <Link href="/dashboard" className="w-full sm:w-auto text-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
                             Dashboard'a Dön
                         </Link>
                     </div>
@@ -243,12 +237,12 @@ export default async function TakvimPage({
                         </div>
 
                         {/* Takvim Grid Scroll Container */}
-                        <div className="overflow-x-auto">
-                            <div className="min-w-[900px]"> {/* Mobilde sıkışmaması için min-width */}
+                        <div className="overflow-x-hidden md:overflow-x-auto">
+                            <div className="w-full md:min-w-[900px]"> {/* Mobilde full width, desktopta min-width */}
                                 {/* Gün Başlıkları */}
                                 <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
                                     {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
-                                        <div key={day} className="px-2 py-3 text-center text-sm font-semibold text-gray-600 border-r last:border-r-0 border-gray-100">{day}</div>
+                                        <div key={day} className="px-1 py-1 md:px-2 md:py-3 text-center text-[10px] md:text-sm font-semibold text-gray-600 border-r last:border-r-0 border-gray-100">{day}</div>
                                     ))}
                                 </div>
 
@@ -262,35 +256,50 @@ export default async function TakvimPage({
                                         return (
                                             <div
                                                 key={idx}
-                                                className={`min-h-[120px] border-b border-r border-gray-200 p-2 ${!day.isCurrentMonth ? 'bg-gray-50/80' : 'bg-white'} ${isToday ? 'bg-blue-50 ring-2 ring-inset ring-blue-400' : ''}`}
+                                                className={`min-h-[70px] md:min-h-[120px] border-b border-r border-gray-200 p-1 md:p-2 ${!day.isCurrentMonth ? 'bg-gray-50/80' : 'bg-white'} ${isToday ? 'bg-blue-50 ring-1 md:ring-2 ring-inset ring-blue-400' : ''}`}
                                             >
-                                                <div className={`text-base font-bold mb-2 ${!day.isCurrentMonth ? 'text-gray-400' : 'text-gray-800'} ${isToday ? 'text-blue-700' : ''}`}>
+                                                <div className={`text-xs md:text-base font-bold mb-1 md:mb-2 ${!day.isCurrentMonth ? 'text-gray-400' : 'text-gray-800'} ${isToday ? 'text-blue-700' : ''}`}>
                                                     {day.date.getDate()}
                                                 </div>
-                                                <div className="space-y-1.5">
-                                                    {dayFaaliyetler.slice(0, 2).map(f => (
-                                                        <div key={f.id} className="group relative">
-                                                            <Link
-                                                                href={`/takvim/${f.id}`}
-                                                                className="block px-2 py-1.5 text-sm bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-md shadow-sm hover:from-blue-600 hover:to-indigo-600 transition"
-                                                            >
-                                                                <div className="font-semibold truncate">{f.konu}</div>
-                                                                {f.saat && <div className="text-xs text-blue-100 mt-0.5">🕐 {f.saat.slice(0, 5)}</div>}
+                                                <div className="space-y-1 md:space-y-1.5">
+                                                    {/* Mobil Görünüm (Noktalar) */}
+                                                    <div className="md:hidden flex flex-wrap gap-1">
+                                                        {dayFaaliyetler.slice(0, 4).map(f => (
+                                                            <Link href={`/takvim/${f.id}`} key={f.id} className="block">
+                                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                                                             </Link>
-                                                            {/* Tooltip Balonu */}
-                                                            <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                                                                <div className="font-bold text-base mb-2">{f.konu}</div>
-                                                                {f.konum && <div className="flex items-center gap-2 mb-1"><span className="text-blue-300">📍</span> {f.konum}</div>}
-                                                                {f.saat && <div className="flex items-center gap-2 mb-1"><span className="text-yellow-300">🕐</span> {f.saat}</div>}
-                                                                {f.gorevli && <div className="flex items-center gap-2"><span className="text-green-300">👤</span> {f.gorevli}</div>}
-                                                                {!f.konum && !f.gorevli && !f.saat && <div className="text-gray-400 text-xs">Detay için tıklayın</div>}
-                                                                <div className="absolute left-4 -bottom-2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
+                                                        ))}
+                                                        {dayFaaliyetler.length > 4 && (
+                                                            <span className="text-[10px] text-gray-500 leading-none self-center">+{dayFaaliyetler.length - 4}</span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Masaüstü Görünüm (Detaylı) */}
+                                                    <div className="hidden md:block space-y-1.5">
+                                                        {dayFaaliyetler.slice(0, 2).map(f => (
+                                                            <div key={f.id} className="group relative">
+                                                                <Link
+                                                                    href={`/takvim/${f.id}`}
+                                                                    className="block px-2 py-1.5 text-sm bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-md shadow-sm hover:from-blue-600 hover:to-indigo-600 transition"
+                                                                >
+                                                                    <div className="font-semibold truncate">{f.konu}</div>
+                                                                    {f.saat && <div className="text-xs text-blue-100 mt-0.5">🕐 {f.saat.slice(0, 5)}</div>}
+                                                                </Link>
+                                                                {/* Tooltip Balonu */}
+                                                                <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                                                                    <div className="font-bold text-base mb-2">{f.konu}</div>
+                                                                    {f.konum && <div className="flex items-center gap-2 mb-1"><span className="text-blue-300">📍</span> {f.konum}</div>}
+                                                                    {f.saat && <div className="flex items-center gap-2 mb-1"><span className="text-yellow-300">🕐</span> {f.saat}</div>}
+                                                                    {f.gorevli && <div className="flex items-center gap-2"><span className="text-green-300">👤</span> {f.gorevli}</div>}
+                                                                    {!f.konum && !f.gorevli && !f.saat && <div className="text-gray-400 text-xs">Detay için tıklayın</div>}
+                                                                    <div className="absolute left-4 -bottom-2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-gray-900"></div>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
-                                                    {dayFaaliyetler.length > 2 && (
-                                                        <div className="text-sm font-medium text-blue-600 px-2">+{dayFaaliyetler.length - 2} faaliyet daha</div>
-                                                    )}
+                                                        ))}
+                                                        {dayFaaliyetler.length > 2 && (
+                                                            <div className="text-sm font-medium text-blue-600 px-2">+{dayFaaliyetler.length - 2} faaliyet daha</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )
