@@ -13,10 +13,13 @@ export default async function DashboardLayout({
         <div className="min-h-screen bg-gray-50/50">
             <header className="sticky top-0 z-10 bg-white border-b border-gray-200/60 shadow-sm backdrop-blur-md bg-white/80 supports-[backdrop-filter]:bg-white/60">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-blue-600 p-2 rounded-lg">
-                            <User className="h-5 w-5 text-white" />
-                        </div>
+                    <div className="flex items-center gap-4">
+                        <img
+                            src="/muyet-logo.png"
+                            alt="MUYET"
+                            className="h-12 w-auto"
+                        />
+                        <div className="h-8 w-px bg-gray-200"></div>
                         <span className="font-bold text-lg text-gray-800 tracking-tight">
                             {session?.user?.name || "Kullanıcı Paneli"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Mahalle Belirsiz"})</span>
                         </span>

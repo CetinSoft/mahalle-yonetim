@@ -83,6 +83,14 @@ export interface UserMahalle {
     createdAt: Date
 }
 
+export interface UserIlce {
+    id: string
+    tcNo: string
+    ilce: string
+    assignedBy: string | null
+    createdAt: Date
+}
+
 export interface Invitation {
     id: string
     citizenId: string

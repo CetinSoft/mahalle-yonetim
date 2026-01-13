@@ -25,8 +25,15 @@ export function LoginForm() {
     return (
         <form action={dispatch}>
             <Card className="w-full max-w-sm mx-auto shadow-2xl border-none ring-1 ring-gray-100">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl font-bold text-center text-blue-900">Mahalle Portalı</CardTitle>
+                <CardHeader className="space-y-3 pb-4">
+                    <div className="flex justify-center">
+                        <img
+                            src="/muyet-logo.png"
+                            alt="MUYET - Mahalle Üye Takibi"
+                            className="h-32 w-auto"
+                        />
+                    </div>
+                    <CardTitle className="text-xl font-bold text-center text-blue-900">Mahalle Üye Takibi</CardTitle>
                     <CardDescription className="text-center">
                         Devam etmek için TC Kimlik Numaranızı giriniz.
                     </CardDescription>
