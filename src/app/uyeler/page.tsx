@@ -361,7 +361,12 @@ export default async function UyelerPage({
 
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between flex-wrap gap-4">
-                            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{displayTitle} Listesi</h1>
+                            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
+                                {displayTitle} Listesi
+                                <span className="text-lg font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                    {totalCount}
+                                </span>
+                            </h1>
                             <div className="flex items-center gap-3">
                                 {/* Dashboard linki */}
                                 <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:underline">
@@ -377,9 +382,6 @@ export default async function UyelerPage({
                                         + Etkinlik Yönetimi
                                     </Link>
                                 )}
-                                <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border shadow-sm">
-                                    Toplam: <span className="font-bold text-gray-900">{totalCount}</span> Kişi
-                                </div>
                                 {/* Excel Export Button */}
                                 <a
                                     href={`/api/export/kisiler?${new URLSearchParams({
@@ -576,7 +578,7 @@ export default async function UyelerPage({
                                             return (
                                                 <tr key={citizen.id} className="hover:bg-gray-50 transition-all group">
                                                     <td className="px-6 py-4 font-medium text-gray-900">
-                                                        <a href={`/citizen/${citizen.id}`} className="block group-hover:text-blue-600 transition-colors">
+                                                        <a href={`/citizen/${citizen.id}${buildPageUrl(currentPage)}`} className="block group-hover:text-blue-600 transition-colors">
                                                             <div className="flex flex-col">
                                                                 <span className="text-base">{citizen.ad} {citizen.soyad}</span>
                                                             </div>
@@ -628,7 +630,7 @@ export default async function UyelerPage({
                                                         <div className="flex items-center justify-end gap-2">
                                                             {/* Görüşme Ekle Butonu */}
                                                             <a
-                                                                href={`/citizen/${citizen.id}#gorusme`}
+                                                                href={`/citizen/${citizen.id}${buildPageUrl(currentPage)}#gorusme`}
                                                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-200 hover:bg-purple-100 transition"
                                                             >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>

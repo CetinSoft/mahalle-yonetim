@@ -8,7 +8,7 @@ import { Calendar, Plus, MapPin, Clock, User, Trash2, ChevronLeft, ChevronRight,
 export default async function TakvimPage({
     searchParams,
 }: {
-    searchParams: { ay?: string; yil?: string; gorunum?: string }
+    searchParams: { ay?: string; yil?: string; gorunum?: string; baslangic?: string }
 }) {
     const session = await auth()
     const tcNo = session?.user?.image
@@ -42,7 +42,15 @@ export default async function TakvimPage({
         return <div className="p-10 text-center text-red-600 font-semibold">Takvim görüntüleme yetkiniz bulunmamaktadır.</div>
     }
 
-    const { ay, yil, gorunum } = await searchParams
+    // Tarih formatlama yardımcı fonksiyonu (YYYY-MM-DD - Yerel Zaman)
+    const formatDate = (date: Date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    const { ay, yil, gorunum, baslangic } = await searchParams
 
     // Takvim için ay/yıl hesaplama
     const now = new Date()
@@ -63,71 +71,116 @@ export default async function TakvimPage({
         ilceOptions = userIlces
     }
 
-    // Takvim için günleri oluştur
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1)
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0)
-    const startDay = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1 // Pazartesi başlangıç
+    // Haftalık görünüm için başlangıç tarihi hesaplama
+    let startOfWeek = new Date() // Varsayılan: Bugünün haftası
 
-    // Faaliyetleri tarihe göre map'le
-    const faaliyetMap: Record<string, Faaliyet[]> = {}
+    // Saat farkını temizle (Yerel 00:00:00 yap)
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    if (baslangic) {
+        // "YYYY-MM-DD" string'ini yerel zamana göre parse et
+        const [y, m, d] = baslangic.split('-').map(Number)
+        startOfWeek = new Date(y, m - 1, d)
+    } else {
+        // Bugünün pazartesi gününü bul
+        const day = startOfWeek.getDay()
+        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Pazar günü ise -6, değilse 1 (Pazartesi=1)
+        startOfWeek.setDate(diff)
+    }
+
+    // Haftanın günlerini oluştur
+    const weekDays: { date: Date }[] = []
+    if (viewMode === 'haftalik') {
+        const d = new Date(startOfWeek)
+        for (let i = 0; i < 7; i++) {
+            weekDays.push({ date: new Date(d) })
+            d.setDate(d.getDate() + 1)
+        }
+    }
+
+    // Navigasyon linkleri (Haftalık için)
+    const prevWeek = new Date(startOfWeek)
+    prevWeek.setDate(prevWeek.getDate() - 7)
+    const prevWeekStr = formatDate(prevWeek)
+
+    const nextWeek = new Date(startOfWeek)
+    nextWeek.setDate(nextWeek.getDate() + 7)
+    const nextWeekStr = formatDate(nextWeek)
+
+    // Navigasyon linkleri (Aylık için)
+    const prevDate = new Date(currentYear, currentMonth - 1, 1)
+    const nextDate = new Date(currentYear, currentMonth + 1, 1) // +1 works correctly even for Dec -> Jan
+
+    const prevMonth = prevDate.getMonth()
+    const prevYear = prevDate.getFullYear()
+    const nextMonth = nextDate.getMonth()
+    const nextYear = nextDate.getFullYear()
+
+    // Ay isimleri
+    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+
+    // Faaliyetleri tarihe göre grupla
+    const faaliyetMap: Record<string, typeof faaliyetler> = {}
     faaliyetler.forEach(f => {
-        const dateKey = new Date(f.tarih).toISOString().split('T')[0]
-        if (!faaliyetMap[dateKey]) faaliyetMap[dateKey] = []
+        // DB'den gelen tarih string veya date objesi olabilir. 
+        // Güvenli yöntem: new Date(f.tarih) yapıp yerel stringe çevirmek
+        const dateObj = new Date(f.tarih)
+        const dateKey = formatDate(dateObj)
+
+        if (!faaliyetMap[dateKey]) {
+            faaliyetMap[dateKey] = []
+        }
         faaliyetMap[dateKey].push(f)
     })
 
-    // Ayın günlerini oluştur
+    // Takvim günlerini oluştur (AYLIK için)
     const calendarDays: { date: Date; isCurrentMonth: boolean }[] = []
 
-    // Önceki ayın günleri
-    const prevMonthLastDay = new Date(currentYear, currentMonth, 0)
-    for (let i = startDay - 1; i >= 0; i--) {
-        calendarDays.push({
-            date: new Date(currentYear, currentMonth - 1, prevMonthLastDay.getDate() - i),
-            isCurrentMonth: false
-        })
+    if (viewMode === 'aylik') {
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1)
+        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0)
+
+        let firstDayIndex = firstDayOfMonth.getDay()
+        if (firstDayIndex === 0) firstDayIndex = 7
+
+        const prevMonthDays = firstDayIndex - 1
+
+        for (let i = prevMonthDays; i > 0; i--) {
+            const d = new Date(currentYear, currentMonth, 1 - i)
+            calendarDays.push({ date: d, isCurrentMonth: false })
+        }
+
+        for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+            const d = new Date(currentYear, currentMonth, i)
+            calendarDays.push({ date: d, isCurrentMonth: true })
+        }
+
+        const remainingCells = 42 - calendarDays.length
+        for (let i = 1; i <= remainingCells; i++) {
+            const d = new Date(currentYear, currentMonth + 1, i)
+            calendarDays.push({ date: d, isCurrentMonth: false })
+        }
     }
-
-    // Bu ayın günleri
-    for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
-        calendarDays.push({
-            date: new Date(currentYear, currentMonth, i),
-            isCurrentMonth: true
-        })
-    }
-
-    // Sonraki ayın günleri (6 satır tamamlamak için)
-    const remainingDays = 42 - calendarDays.length
-    for (let i = 1; i <= remainingDays; i++) {
-        calendarDays.push({
-            date: new Date(currentYear, currentMonth + 1, i),
-            isCurrentMonth: false
-        })
-    }
-
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
-
-    const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-        'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
 
     const canEdit = isSuperAdmin || isDistrictAdmin
     const today = new Date().toISOString().split('T')[0]
 
     return (
         <div className="min-h-screen bg-gray-50/50">
-            {/* MUYET Header */}
+            {/* Header */}
             <header className="sticky top-0 z-10 bg-white border-b border-gray-200/60 shadow-sm backdrop-blur-md bg-white/80 supports-[backdrop-filter]:bg-white/60">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link href="/dashboard">
-                            <img src="/muyet-logo.png" alt="MUYET" className="h-12 w-auto" />
+                            <img
+                                src="/muyet-logo.png"
+                                alt="MUYET"
+                                className="h-8 md:h-12 w-auto"
+                            />
                         </Link>
-                        <div className="h-8 w-px bg-gray-200"></div>
-                        <span className="font-bold text-lg text-gray-800 tracking-tight">
-                            {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2">({session?.user?.email || "Belirsiz"})</span>
+                        <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
+                        <span className="font-bold text-sm md:text-lg text-gray-800 tracking-tight">
+                            {session?.user?.name || "Kullanıcı"} <span className="font-normal text-gray-500 text-sm ml-2 hidden md:inline">({session?.user?.email || "Belirsiz"})</span>
                         </span>
                     </div>
                 </div>
@@ -148,6 +201,13 @@ export default async function TakvimPage({
                             >
                                 <Grid3X3 className="h-4 w-4" />
                                 Aylık
+                            </Link>
+                            <Link
+                                href={`/takvim?gorunum=haftalik&baslangic=${startOfWeek.toISOString().split('T')[0]}`}
+                                className={`flex-1 sm:flex-none justify-center px-4 py-2 text-sm font-medium flex items-center gap-2 ${viewMode === 'haftalik' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                Haftalık
                             </Link>
                             <Link
                                 href={`/takvim?gorunum=liste`}
@@ -216,20 +276,31 @@ export default async function TakvimPage({
                     </details>
                 )}
 
-                {viewMode === 'aylik' ? (
-                    /* AYLIK TAKVİM GÖRÜNÜMÜ */
+                {viewMode === 'aylik' || viewMode === 'haftalik' ? (
+                    /* AYLIK VE HAFTALIK TAKVİM GÖRÜNÜMÜ */
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        {/* Ay Navigasyonu */}
+                        {/* Navigasyon */}
                         <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
                             <Link
-                                href={`/takvim?ay=${prevMonth}&yil=${prevYear}&gorunum=aylik`}
+                                href={viewMode === 'haftalik'
+                                    ? `/takvim?gorunum=haftalik&baslangic=${prevWeekStr}`
+                                    : `/takvim?ay=${prevMonth}&yil=${prevYear}&gorunum=aylik`
+                                }
                                 className="p-2 hover:bg-white/20 rounded-lg transition"
                             >
                                 <ChevronLeft className="h-5 w-5" />
                             </Link>
-                            <h2 className="text-xl font-bold">{monthNames[currentMonth]} {currentYear}</h2>
+                            <h2 className="text-xl font-bold">
+                                {viewMode === 'haftalik'
+                                    ? `${startOfWeek.getDate()} ${monthNames[startOfWeek.getMonth()]} - ${new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000).getDate()} ${monthNames[new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000).getMonth()]}`
+                                    : `${monthNames[currentMonth]} ${currentYear}`
+                                }
+                            </h2>
                             <Link
-                                href={`/takvim?ay=${nextMonth}&yil=${nextYear}&gorunum=aylik`}
+                                href={viewMode === 'haftalik'
+                                    ? `/takvim?gorunum=haftalik&baslangic=${nextWeekStr}`
+                                    : `/takvim?ay=${nextMonth}&yil=${nextYear}&gorunum=aylik`
+                                }
                                 className="p-2 hover:bg-white/20 rounded-lg transition"
                             >
                                 <ChevronRight className="h-5 w-5" />
@@ -248,18 +319,21 @@ export default async function TakvimPage({
 
                                 {/* Takvim Günleri */}
                                 <div className="grid grid-cols-7">
-                                    {calendarDays.map((day, idx) => {
-                                        const dateKey = day.date.toISOString().split('T')[0]
+                                    {(viewMode === 'haftalik' ? weekDays : calendarDays).map((dayWrapper, idx) => {
+                                        const date = 'isCurrentMonth' in dayWrapper ? dayWrapper.date : dayWrapper.date
+                                        const isCurrentMonth = 'isCurrentMonth' in dayWrapper ? dayWrapper.isCurrentMonth : true
+
+                                        const dateKey = formatDate(date)
                                         const dayFaaliyetler = faaliyetMap[dateKey] || []
                                         const isToday = dateKey === today
 
                                         return (
                                             <div
                                                 key={idx}
-                                                className={`min-h-[70px] md:min-h-[120px] border-b border-r border-gray-200 p-1 md:p-2 ${!day.isCurrentMonth ? 'bg-gray-50/80' : 'bg-white'} ${isToday ? 'bg-blue-50 ring-1 md:ring-2 ring-inset ring-blue-400' : ''}`}
+                                                className={`min-h-[70px] md:min-h-[120px] border-b border-r border-gray-200 p-1 md:p-2 ${!isCurrentMonth ? 'bg-gray-50/80' : 'bg-white'} ${isToday ? 'bg-blue-50 ring-1 md:ring-2 ring-inset ring-blue-400' : ''}`}
                                             >
-                                                <div className={`text-xs md:text-base font-bold mb-1 md:mb-2 ${!day.isCurrentMonth ? 'text-gray-400' : 'text-gray-800'} ${isToday ? 'text-blue-700' : ''}`}>
-                                                    {day.date.getDate()}
+                                                <div className={`text-xs md:text-base font-bold mb-1 md:mb-2 ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-800'} ${isToday ? 'text-blue-700' : ''}`}>
+                                                    {date.getDate()}
                                                 </div>
                                                 <div className="space-y-1 md:space-y-1.5">
                                                     {/* Mobil Görünüm (Noktalar) */}
@@ -276,7 +350,7 @@ export default async function TakvimPage({
 
                                                     {/* Masaüstü Görünüm (Detaylı) */}
                                                     <div className="hidden md:block space-y-1.5">
-                                                        {dayFaaliyetler.slice(0, 2).map(f => (
+                                                        {dayFaaliyetler.slice(0, viewMode === 'haftalik' ? 5 : 2).map(f => (
                                                             <div key={f.id} className="group relative">
                                                                 <Link
                                                                     href={`/takvim/${f.id}`}
@@ -296,8 +370,8 @@ export default async function TakvimPage({
                                                                 </div>
                                                             </div>
                                                         ))}
-                                                        {dayFaaliyetler.length > 2 && (
-                                                            <div className="text-sm font-medium text-blue-600 px-2">+{dayFaaliyetler.length - 2} faaliyet daha</div>
+                                                        {dayFaaliyetler.length > (viewMode === 'haftalik' ? 5 : 2) && (
+                                                            <div className="text-sm font-medium text-blue-600 px-2">+{dayFaaliyetler.length - (viewMode === 'haftalik' ? 5 : 2)} faaliyet daha</div>
                                                         )}
                                                     </div>
                                                 </div>

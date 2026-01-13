@@ -225,6 +225,69 @@ export async function removeKatilimci(faaliyetId: string, citizenId: string) {
 
 // ==================== LİSTELEME ====================
 
+// Otomatik Toplantı Kontrolü
+async function ensureWeeklyMeetings(ilce: string) {
+    if (!ilce) return
+
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth()
+
+    // Bu ayın ve gelecek ayın tüm Pazartesi günlerini bul
+    const mondays: Date[] = []
+
+    // 2 aylık periyot için döngü (şimdiki ve sonraki ay)
+    for (let m = 0; m <= 1; m++) {
+        let date = new Date(currentYear, currentMonth + m, 1)
+        const month = date.getMonth()
+
+        // Ayın ilk gününe git, ilk Pazartesiyi bul
+        while (date.getDay() !== 1) {
+            date.setDate(date.getDate() + 1)
+        }
+
+        // Ay bitene kadar Pazartesileri ekle
+        while (date.getMonth() === month) {
+            mondays.push(new Date(date))
+            date.setDate(date.getDate() + 7)
+        }
+    }
+
+    // Her Pazartesi için veritabanını kontrol et
+    for (const monday of mondays) {
+        // Tarih formatı YYYY-MM-DD (yerel saat dilimine dikkat et)
+        // new Date() UTC çalışabilir, bu yüzden yerel tarihi string yaparken dikkatli olalım
+        // Basitçe: YYYY-MM-DD stringini manuel oluşturalım
+        const tarihStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
+
+        // Bu tarihte, bu ilçede, bu konuda toplantı var mı?
+        const existing = await queryOne(
+            `SELECT id FROM "Faaliyet" 
+             WHERE tarih = $1::date AND ilce = $2 AND konu = 'Yönetim Kurulu Toplantısı'`,
+            [tarihStr, ilce]
+        )
+
+        if (!existing) {
+            // Yoksa oluştur
+            await query(
+                `INSERT INTO "Faaliyet" (konu, icerik, tarih, saat, konum, gorevli, ilce, "olusturanTc", "createdAt", "updatedAt")
+                 VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8, NOW(), NOW())`,
+                [
+                    'Yönetim Kurulu Toplantısı',
+                    'Haftalık olağan yönetim kurulu toplantısı',
+                    tarihStr,
+                    '20:00', // Varsayılan saat
+                    'İlçe Başkanlığı', // Varsayılan konum
+                    'İlçe Başkanı', // Varsayılan görevli
+                    ilce,
+                    'SISTEM' // Oluşturan
+                ]
+            )
+            console.log(`Otomatik toplantı oluşturuldu: ${tarihStr} - ${ilce}`)
+        }
+    }
+}
+
 export async function getFaaliyetler(ilce?: string): Promise<Faaliyet[]> {
     const session = await auth()
     const tcNo = session?.user?.image
@@ -254,6 +317,13 @@ export async function getFaaliyetler(ilce?: string): Promise<Faaliyet[]> {
             )
             accessibleIlces = mahalleInfo.map(m => m.ilce)
         }
+    }
+
+    // Otomatik toplantıları kontrol et (Sadece belirli bir ilçe seçiliyse veya kullanıcının tek ilçesi varsa)
+    if (accessibleIlces.length === 1) {
+        // Arka planda çalışması için await kullanmadan çağırabiliriz ama
+        // Next.js server action içinde senkron olması daha garantidir
+        await ensureWeeklyMeetings(accessibleIlces[0])
     }
 
     let whereClause = ''

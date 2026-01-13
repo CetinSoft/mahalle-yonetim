@@ -7,9 +7,10 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import GorusmeForm from "@/components/GorusmeForm"
 
-export default async function CitizenDetailPage({ params }: { params: { id: string } }) {
+export default async function CitizenDetailPage({ params, searchParams }: { params: { id: string }, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
     const session = await auth()
     const { id } = await params
+    const resolvedSearchParams = await searchParams
 
     const citizen = await queryOne<Citizen>(
         'SELECT * FROM "Citizen" WHERE id = $1',
@@ -59,6 +60,10 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
         }
     }
 
+    // Geri dönüş URL'ini oluştur
+    const queryString = new URLSearchParams(resolvedSearchParams as any).toString()
+    const backUrl = queryString ? `/uyeler?${queryString}` : '/uyeler'
+
     return (
         <div className="min-h-screen bg-gray-50/50">
             {/* MUYET Header */}
@@ -98,7 +103,7 @@ export default async function CitizenDetailPage({ params }: { params: { id: stri
             </header>
 
             <div className="container max-w-4xl mx-auto py-8 px-4 space-y-8">
-                <Link href="/uyeler" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                <Link href={backUrl} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Listeye Dön
                 </Link>
