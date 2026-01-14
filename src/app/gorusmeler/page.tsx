@@ -117,10 +117,10 @@ export default async function GorusmelerPage({
         const current = { mahalle: selectedMahalle, sonuc, arama }
         const merged = { ...current, ...overrides }
         const parts: string[] = []
-        if (merged.mahalle && isAdmin) parts.push(`mahalle = ${merged.mahalle} `)
-        if (merged.sonuc) parts.push(`sonuc = ${merged.sonuc} `)
-        if (merged.arama) parts.push(`arama = ${encodeURIComponent(merged.arama)} `)
-        return `/ gorusmeler${parts.length ? '?' + parts.join('&') : ''} `
+        if (merged.mahalle && isAdmin) parts.push(`mahalle=${merged.mahalle}`)
+        if (merged.sonuc) parts.push(`sonuc=${merged.sonuc}`)
+        if (merged.arama) parts.push(`arama=${encodeURIComponent(merged.arama)}`)
+        return `/gorusmeler${parts.length ? '?' + parts.join('&') : ''}`
     }
 
     return (
@@ -171,15 +171,20 @@ export default async function GorusmelerPage({
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link href="/dashboard" className="text-sm font-medium text-blue-600 hover:underline">
-                            ← Kişi Listesine Dön
+                        {/* Dashboard linki */}
+                        <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:underline">
+                            🏠 Dashboard (Anasayfa)
+                        </Link>
+                        {/* Üyeler linki */}
+                        <Link href="/uyeler" className="text-sm font-medium text-blue-600 hover:underline">
+                            👥 Üyeler
                         </Link>
                         <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border shadow-sm">
                             Toplam: <span className="font-bold text-gray-900">{gorusmeler.length}</span> Görüşme
                         </div>
                         {/* Excel Export Button */}
                         <a
-                            href={`/ api /export/gorusmeler?${new URLSearchParams({
+                            href={`/api/export/gorusmeler?${new URLSearchParams({
                                 ...(selectedMahalle && isAdmin && { mahalle: selectedMahalle }),
                                 ...(sonuc && { sonuc }),
                                 ...(arama && { arama }),
@@ -194,67 +199,90 @@ export default async function GorusmelerPage({
 
                 {/* Filtreler */}
                 <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    {/* Arama */}
-                    <form method="GET" className="flex gap-2 flex-1 min-w-[200px] max-w-md">
-                        {selectedMahalle && isAdmin && <input type="hidden" name="mahalle" value={selectedMahalle} />}
-                        {sonuc && <input type="hidden" name="sonuc" value={sonuc} />}
-                        <div className="relative flex-1">
-                            <input
-                                type="text"
-                                name="arama"
-                                placeholder="Kişi veya görüşmeyi yapan..."
-                                defaultValue={arama || ''}
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-                            </svg>
-                        </div>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-                            Ara
-                        </button>
-                    </form>
-
-                    <div className="w-px bg-gray-200 hidden md:block"></div>
-
                     {/* Sonuç Filtresi */}
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sonuç</span>
-                        <div className="flex gap-2">
-                            <Link href={buildUrl({ sonuc: undefined })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${!sonuc || sonuc === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'} `}>
+                        <div className="flex flex-wrap gap-2">
+                            <Link
+                                href={buildUrl({ sonuc: undefined })}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${!sonuc || sonuc === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'}`}
+                            >
                                 Tümü
                             </Link>
-                            <Link href={buildUrl({ sonuc: 'olumlu' })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${sonuc === 'olumlu' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400'} `}>
+                            <Link
+                                href={buildUrl({ sonuc: 'olumlu' })}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${sonuc === 'olumlu' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400'}`}
+                            >
                                 Olumlu
                             </Link>
-                            <Link href={buildUrl({ sonuc: 'olumsuz' })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${sonuc === 'olumsuz' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200 hover:border-red-400'} `}>
+                            <Link
+                                href={buildUrl({ sonuc: 'olumsuz' })}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${sonuc === 'olumsuz' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-600 border-gray-200 hover:border-red-400'}`}
+                            >
                                 Olumsuz
                             </Link>
-                            <Link href={buildUrl({ sonuc: 'belirsiz' })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${sonuc === 'belirsiz' ? 'bg-gray-600 text-white border-gray-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'} `}>
+                            <Link
+                                href={buildUrl({ sonuc: 'belirsiz' })}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${sonuc === 'belirsiz' ? 'bg-gray-600 text-white border-gray-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                            >
                                 Belirsiz
                             </Link>
                         </div>
                     </div>
 
+                    <div className="w-px bg-gray-200 hidden md:block"></div>
+
                     {/* Mahalle Filtresi (Admin) */}
                     {isAdmin && mahalleOptions.length > 0 && (
                         <>
-                            <div className="w-px bg-gray-200 hidden md:block"></div>
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Mahalle</span>
                                 <div className="flex flex-wrap gap-2">
-                                    <Link href={buildUrl({ mahalle: undefined })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${!selectedMahalle ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'} `}>
+                                    <Link
+                                        href={buildUrl({ mahalle: undefined })}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${!selectedMahalle ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'}`}
+                                    >
                                         Tümü
                                     </Link>
                                     {mahalleOptions.map(m => (
-                                        <Link key={m} href={buildUrl({ mahalle: m })} className={`px - 3 py - 1.5 rounded - full text - xs font - medium transition - colors border ${selectedMahalle === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'} `}>
+                                        <Link
+                                            key={m}
+                                            href={buildUrl({ mahalle: m })}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedMahalle === m ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-400'}`}
+                                        >
                                             {m}
                                         </Link>
                                     ))}
                                 </div>
                             </div>
+                            <div className="w-px bg-gray-200 hidden md:block"></div>
                         </>
                     )}
+
+                    {/* Arama */}
+                    <div className="space-y-2 flex-1 min-w-[200px]">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Arama</span>
+                        <form method="GET" className="flex gap-2">
+                            {selectedMahalle && isAdmin && <input type="hidden" name="mahalle" value={selectedMahalle} />}
+                            {sonuc && <input type="hidden" name="sonuc" value={sonuc} />}
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    name="arama"
+                                    placeholder="Kişi veya görüşmeyi yapan..."
+                                    defaultValue={arama || ''}
+                                    className="w-full pl-8 pr-2 py-1.5 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                                </svg>
+                            </div>
+                            <button type="submit" className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition">Ara</button>
+                            {arama && (
+                                <a href={buildUrl({ arama: undefined })} className="px-2 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 transition">×</a>
+                            )}
+                        </form>
+                    </div>
                 </div>
 
                 {/* Tablo */}
@@ -283,7 +311,7 @@ export default async function GorusmelerPage({
                                     gorusmeler.map((g) => (
                                         <tr key={g.id} className="hover:bg-gray-50/80 transition-all">
                                             <td className="px-6 py-4">
-                                                <Link href={`/ citizen / ${g.citizenId} `} className="font-medium text-gray-900 hover:text-blue-600 transition">
+                                                <Link href={`/citizen/${g.citizenId}`} className="font-medium text-gray-900 hover:text-blue-600 transition">
                                                     {g.citizenAd} {g.citizenSoyad}
                                                 </Link>
                                             </td>

@@ -4,6 +4,7 @@ import { auth } from "@/auth"
 import { query, queryOne, Faaliyet, FaaliyetWithKatilimcilar } from "@/lib/db"
 import { isAdminTC, getUserIlces } from "@/lib/admin"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 
 const FaaliyetSchema = z.object({
@@ -61,11 +62,12 @@ export async function createFaaliyet(formData: FormData) {
         )
 
         revalidatePath('/takvim')
-        return { success: true, message: 'Faaliyet oluşturuldu.' }
     } catch (error) {
         console.error('Faaliyet oluşturma hatası:', error)
         throw new Error('Veritabanı hatası oluştu.')
     }
+
+    redirect('/takvim')
 }
 
 export async function updateFaaliyet(id: string, formData: FormData) {
@@ -114,11 +116,12 @@ export async function updateFaaliyet(id: string, formData: FormData) {
 
         revalidatePath('/takvim')
         revalidatePath(`/takvim/${id}`)
-        return { success: true, message: 'Faaliyet güncellendi.' }
     } catch (error) {
         console.error('Faaliyet güncelleme hatası:', error)
         throw new Error('Veritabanı hatası oluştu.')
     }
+
+    redirect('/takvim')
 }
 
 export async function deleteFaaliyet(id: string) {
@@ -144,11 +147,12 @@ export async function deleteFaaliyet(id: string) {
     try {
         await query('DELETE FROM "Faaliyet" WHERE id = $1', [id])
         revalidatePath('/takvim')
-        return { success: true, message: 'Faaliyet silindi.' }
     } catch (error) {
         console.error('Faaliyet silme hatası:', error)
         throw new Error('Veritabanı hatası oluştu.')
     }
+
+    redirect('/takvim')
 }
 
 // ==================== KATILIMCI İŞLEMLERİ ====================

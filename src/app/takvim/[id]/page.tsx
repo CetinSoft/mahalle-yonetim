@@ -22,12 +22,12 @@ export default async function FaaliyetDetailPage({ params }: { params: { id: str
     const isDistrictAdmin = userIlces.length > 0
     const canEdit = isSuperAdmin || (isDistrictAdmin && userIlces.includes(faaliyet.ilce))
 
-    // Katılımcı eklemek için kişi listesi (faaliyet ilçesindeki kişiler)
-    let availableCitizens: { id: string; ad: string; soyad: string; mahalle: string }[] = []
+    // Katılımcı eklemek için kişi listesi (faaliyet ilçesindeki VE görevi içinde 'İLÇE' geçen kişiler)
+    let availableCitizens: { id: string; ad: string; soyad: string; mahalle: string; gorevi: string }[] = []
     if (canEdit) {
-        availableCitizens = await query<{ id: string; ad: string; soyad: string; mahalle: string }>(
-            `SELECT id, ad, soyad, mahalle FROM "Citizen" 
-             WHERE ilce = $1 
+        availableCitizens = await query<{ id: string; ad: string; soyad: string; mahalle: string; gorevi: string }>(
+            `SELECT id, ad, soyad, mahalle, gorevi FROM "Citizen" 
+             WHERE ilce = $1 AND gorevi ILIKE '%İLÇE%'
              ORDER BY ad, soyad 
              LIMIT 500`,
             [faaliyet.ilce]
@@ -214,27 +214,26 @@ export default async function FaaliyetDetailPage({ params }: { params: { id: str
                                         await addKatilimci(id, citizenId)
                                     }
                                 }} className="mb-4">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Katılımcı Ekle</label>
-                                    <div className="flex gap-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Katılımcı Ekle (Görevi Olanlar)</label>
+                                    <div className="flex gap-2 w-full">
                                         <select
                                             name="citizenId"
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 max-h-[200px]"
-                                            size={1}
+                                            className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 truncate"
                                         >
                                             <option value="">Kişi seçin...</option>
                                             {availableCitizens
                                                 .filter(c => !faaliyet.katilimcilar.some(k => k.citizenId === c.id))
                                                 .slice(0, 100)
                                                 .map(c => (
-                                                    <option key={c.id} value={c.id}>{c.ad} {c.soyad} ({c.mahalle})</option>
+                                                    <option key={c.id} value={c.id}>{c.ad} {c.soyad} - {c.gorevi}</option>
                                                 ))
                                             }
                                         </select>
-                                        <button type="submit" className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition">
+                                        <button type="submit" className="flex-shrink-0 bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition">
                                             <Plus className="h-5 w-5" />
                                         </button>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-1">İlk 100 kişi gösteriliyor</p>
+                                    <p className="text-xs text-gray-500 mt-1">Sadece görevi olan kişiler listeleniyor (ilk 100)</p>
                                 </form>
                             )}
 

@@ -193,9 +193,9 @@ export default async function UyelerPage({
         .map(i => i.yargitayDurumu)
         .filter(status => status && status.trim().length > 0)
 
-    // Fetch Active Event with invitations
+    // Fetch Active Event with invitations (sadece bugün veya sonrasında olan)
     const activeEvent = await queryOne<Event>(
-        `SELECT * FROM "Event" WHERE "isActive" = true ORDER BY "createdAt" DESC LIMIT 1`
+        `SELECT * FROM "Event" WHERE "isActive" = true AND date >= CURRENT_DATE ORDER BY "createdAt" DESC LIMIT 1`
     )
 
     let invitationMap = new Map<string, string>()

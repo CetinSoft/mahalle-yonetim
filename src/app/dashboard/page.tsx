@@ -80,6 +80,35 @@ export default async function DashboardPage() {
         )
     }
 
+    // ===== MAHALLE İCMALİ (Sadece Admin İçin) =====
+    interface MahalleIcmal {
+        mahalle: string
+        uyeSayisi: number
+        aktifUyeSayisi: number
+        istifaSayisi: number
+        baskaPartiSayisi: number
+        gorusmeSayisi: number
+        tcHataliSayisi: number
+    }
+
+    let mahalleIcmal: MahalleIcmal[] = []
+    if (isAdmin) {
+        mahalleIcmal = await query<MahalleIcmal>(
+            `SELECT 
+                c.mahalle,
+                COUNT(*)::int as "uyeSayisi",
+                COUNT(CASE WHEN c."yargitayDurumu" ILIKE '%AKTİF%' OR c."yargitayDurumu" ILIKE '%AKTIF%' THEN 1 END)::int as "aktifUyeSayisi",
+                COUNT(CASE WHEN c."yargitayDurumu" ILIKE '%İSTİFA%' OR c."yargitayDurumu" ILIKE '%ISTIFA%' THEN 1 END)::int as "istifaSayisi",
+                COUNT(CASE WHEN c."yargitayDurumu" ILIKE '%BAŞKA%' OR c."yargitayDurumu" ILIKE '%BASKA%' OR c."yargitayDurumu" ILIKE '%PARTİ%' THEN 1 END)::int as "baskaPartiSayisi",
+                COALESCE((SELECT COUNT(*) FROM "Gorusme" g WHERE g."citizenId" IN (SELECT id FROM "Citizen" WHERE mahalle = c.mahalle)), 0)::int as "gorusmeSayisi",
+                COUNT(CASE WHEN c."yargitayDurumu" ILIKE '%TC HATALI%' OR c."yargitayDurumu" ILIKE '%TC HATAL%' THEN 1 END)::int as "tcHataliSayisi"
+             FROM "Citizen" c
+             WHERE c.mahalle IS NOT NULL AND c.mahalle != ''
+             GROUP BY c.mahalle
+             ORDER BY "uyeSayisi" DESC`
+        )
+    }
+
     // Yargıtay durumu dağılımı
     const yargitayStats = await query<YargitayStats>(
         `SELECT "yargitayDurumu", COUNT(*)::int as count FROM "Citizen" 
@@ -274,9 +303,107 @@ export default async function DashboardPage() {
                         <p className="text-gray-400 text-sm">Yargıtay durumu kaydı yok</p>
                     )}
                 </div>
+            </div>
 
+            {/* Mahalle İcmali - Sadece Admin İçin */}
+            {isAdmin && mahalleIcmal.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                        <h3 className="text-lg font-bold">Mahalle İcmali</h3>
+                        <p className="text-indigo-100 text-sm">Tüm mahallelerin detaylı özeti</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                                <tr>
+                                    <th className="px-4 py-3 text-left">Mahalle</th>
+                                    <th className="px-4 py-3 text-center">Üye</th>
+                                    <th className="px-4 py-3 text-center">Aktif Üye</th>
+                                    <th className="px-4 py-3 text-center">İstifa</th>
+                                    <th className="px-4 py-3 text-center">Başka Parti</th>
+                                    <th className="px-4 py-3 text-center">Görüşme</th>
+                                    <th className="px-4 py-3 text-center">TC Hatalı</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {mahalleIcmal.map((m) => (
+                                    <tr key={m.mahalle} className="hover:bg-gray-50">
+                                        <td className="px-4 py-3 font-medium text-gray-900">
+                                            <Link href={`/uyeler?mahalle=${encodeURIComponent(m.mahalle)}`} className="hover:text-blue-600 hover:underline">
+                                                {m.mahalle}
+                                            </Link>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="inline-flex items-center justify-center min-w-[40px] px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold">
+                                                {m.uyeSayisi}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {m.aktifUyeSayisi > 0 ? (
+                                                <span className="inline-flex items-center justify-center min-w-[40px] px-2 py-1 bg-green-100 text-green-700 rounded-full font-semibold">
+                                                    {m.aktifUyeSayisi}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {m.istifaSayisi > 0 ? (
+                                                <span className="inline-flex items-center justify-center min-w-[40px] px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-semibold">
+                                                    {m.istifaSayisi}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {m.baskaPartiSayisi > 0 ? (
+                                                <span className="inline-flex items-center justify-center min-w-[40px] px-2 py-1 bg-red-100 text-red-700 rounded-full font-semibold">
+                                                    {m.baskaPartiSayisi}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {m.gorusmeSayisi > 0 ? (
+                                                <Link href={`/gorusmeler?mahalle=${encodeURIComponent(m.mahalle)}`} className="inline-flex items-center justify-center min-w-[40px] px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-semibold hover:bg-purple-200 transition">
+                                                    {m.gorusmeSayisi}
+                                                </Link>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {m.tcHataliSayisi > 0 ? (
+                                                <span className="inline-flex items-center justify-center min-w-[40px] px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full font-semibold">
+                                                    {m.tcHataliSayisi}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {/* Toplam Satırı */}
+                                <tr className="bg-gray-100 font-bold">
+                                    <td className="px-4 py-3 text-gray-900">TOPLAM</td>
+                                    <td className="px-4 py-3 text-center text-blue-700">{mahalleIcmal.reduce((sum, m) => sum + m.uyeSayisi, 0)}</td>
+                                    <td className="px-4 py-3 text-center text-green-700">{mahalleIcmal.reduce((sum, m) => sum + m.aktifUyeSayisi, 0)}</td>
+                                    <td className="px-4 py-3 text-center text-orange-700">{mahalleIcmal.reduce((sum, m) => sum + m.istifaSayisi, 0)}</td>
+                                    <td className="px-4 py-3 text-center text-red-700">{mahalleIcmal.reduce((sum, m) => sum + m.baskaPartiSayisi, 0)}</td>
+                                    <td className="px-4 py-3 text-center text-purple-700">{mahalleIcmal.reduce((sum, m) => sum + m.gorusmeSayisi, 0)}</td>
+                                    <td className="px-4 py-3 text-center text-yellow-700">{mahalleIcmal.reduce((sum, m) => sum + m.tcHataliSayisi, 0)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-6">
                 {/* Son Görüşmeler */}
-                <div className={`bg-white rounded-xl p-6 border border-gray-200 shadow-sm ${isAdmin && mahalleStats.length > 0 ? '' : 'md:col-span-2'}`}>
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-gray-900">Son Görüşmeler</h3>
                         <Link href="/gorusmeler" className="text-sm text-purple-600 hover:underline">Tümünü gör →</Link>
@@ -334,3 +461,4 @@ export default async function DashboardPage() {
         </div>
     )
 }
+
