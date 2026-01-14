@@ -160,6 +160,50 @@ export default async function DashboardPage() {
     // Max for chart scaling
     const maxMahalleCount = mahalleStats.length > 0 ? Math.max(...mahalleStats.map(m => m.count)) : 1
 
+    // ===== ARAMA GÖREVLERİ (Mahalle Kullanıcıları İçin) =====
+    // Mevcut hafta hesapla
+    const now = new Date()
+    const startOfYear = new Date(now.getFullYear(), 0, 1)
+    const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
+    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7)
+    const currentWeek = `${now.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`
+
+    // Kullanıcının arama görev istatistikleri (mahalle başkanı veya yetkili için)
+    let aramaGorevStats = { toplam: 0, arandi: 0, bekliyor: 0 }
+    let canSeeAramaGorevleri = false
+
+    // Mahalle yetkisi veya başkanlık kontrolü
+    if (userMahalle && !isAdmin) {
+        // Arama görevi istatistikleri
+        const gorevResult = await queryOne<{ toplam: string; arandi: string; bekliyor: string }>(
+            `SELECT 
+                COUNT(*) as toplam,
+                COUNT(*) FILTER (WHERE durum = 'arandi') as arandi,
+                COUNT(*) FILTER (WHERE durum = 'bekliyor') as bekliyor
+             FROM "AramaGorevi"
+             WHERE mahalle = $1 AND hafta = $2`,
+            [userMahalle, currentWeek]
+        )
+        if (gorevResult) {
+            aramaGorevStats = {
+                toplam: parseInt(gorevResult.toplam || '0', 10),
+                arandi: parseInt(gorevResult.arandi || '0', 10),
+                bekliyor: parseInt(gorevResult.bekliyor || '0', 10)
+            }
+        }
+
+        // Mahalle yetkisi varsa veya mahalle başkanı ise
+        const baskanCheck = await queryOne<{ id: string }>(
+            `SELECT id FROM "Citizen" WHERE "tcNo" = $1 AND gorevi ILIKE '%TEMSİLCİLİK MAHALLE BAŞKANI%'`,
+            [tcNo]
+        )
+        const userMahalleCheck = await queryOne<{ id: string }>(
+            `SELECT id FROM "UserMahalle" WHERE "tcNo" = $1`,
+            [tcNo]
+        )
+        canSeeAramaGorevleri = !!(baskanCheck || userMahalleCheck)
+    }
+
     const displayTitle = isAdmin ? 'Genel Bakış' : `${userMahalle} Mahallesi`
 
     return (
@@ -210,9 +254,56 @@ export default async function DashboardPage() {
                             <span className="text-purple-200 ml-2 text-sm">Tüm mahallelere erişiminiz var</span>
                         </div>
                     </div>
-                    <Link href="/admin/users" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
-                        Kullanıcı Yetkilendirme →
-                    </Link>
+                    <div className="flex gap-2">
+                        <Link href="/admin/arama-gorevleri" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
+                            📞 Arama Görevleri
+                        </Link>
+                        <Link href="/admin/users" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
+                            Kullanıcı Yetkilendirme →
+                        </Link>
+                    </div>
+                </div>
+            )}
+
+            {/* Arama Görevleri Özeti - Mahalle Kullanıcıları İçin */}
+            {canSeeAramaGorevleri && aramaGorevStats.toplam > 0 && (
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-6 text-white shadow-lg">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <div className="text-orange-100 text-sm font-semibold uppercase tracking-wider mb-1">📞 Haftalık Arama Görevleri</div>
+                            <h2 className="text-2xl font-bold">{userMahalle} Mahallesi</h2>
+                        </div>
+                        <Link
+                            href="/admin/arama-gorevleri"
+                            className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition"
+                        >
+                            Tümünü Gör →
+                        </Link>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-white/10 rounded-lg p-4 text-center">
+                            <div className="text-3xl font-bold">{aramaGorevStats.toplam}</div>
+                            <div className="text-orange-100 text-sm">Toplam Görev</div>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-4 text-center">
+                            <div className="text-3xl font-bold text-green-200">{aramaGorevStats.arandi}</div>
+                            <div className="text-orange-100 text-sm">Arandı ✓</div>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-4 text-center">
+                            <div className="text-3xl font-bold text-yellow-200">{aramaGorevStats.bekliyor}</div>
+                            <div className="text-orange-100 text-sm">Bekliyor</div>
+                        </div>
+                    </div>
+                    {aramaGorevStats.bekliyor > 0 && (
+                        <div className="mt-4 text-center">
+                            <Link
+                                href="/admin/arama-gorevleri"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 rounded-lg font-bold hover:bg-orange-50 transition shadow"
+                            >
+                                📞 {aramaGorevStats.bekliyor} Kişi Aranmayı Bekliyor
+                            </Link>
+                        </div>
+                    )}
                 </div>
             )}
 
