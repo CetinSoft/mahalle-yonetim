@@ -133,10 +133,10 @@ export default async function UyelerPage({
         whereClause += (whereClause ? ' AND' : 'WHERE') + ` "gorevi" ILIKE '%başmüşahit%'`
     }
 
-    // Arama filtresi - ad, soyad veya TC ile arama
+    // Arama filtresi - ad, soyad, TC, meslek veya görevi ile arama
     if (arama && arama.trim()) {
         const searchTerm = arama.trim()
-        whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("ad" ILIKE $${paramIndex} OR "soyad" ILIKE $${paramIndex} OR "tcNo" ILIKE $${paramIndex} OR CONCAT("ad", ' ', "soyad") ILIKE $${paramIndex})`
+        whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("ad" ILIKE $${paramIndex} OR "soyad" ILIKE $${paramIndex} OR "tcNo" ILIKE $${paramIndex} OR CONCAT("ad", ' ', "soyad") ILIKE $${paramIndex} OR "meslek" ILIKE $${paramIndex} OR "gorevi" ILIKE $${paramIndex})`
         params.push(`%${searchTerm}%`)
         paramIndex++
     }
@@ -524,7 +524,7 @@ export default async function UyelerPage({
                                         <input
                                             type="text"
                                             name="arama"
-                                            placeholder="İsim, TC..."
+                                            placeholder="İsim, TC, Meslek, Görevi..."
                                             defaultValue={arama || ''}
                                             className="w-full pl-8 pr-2 py-1.5 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />

@@ -136,6 +136,13 @@ export default async function CitizenDetailPage({ params, searchParams }: { para
                                     {citizen.yargitayDurumu || 'Yargıtay Durumu Yok'}
                                 </div>
 
+                                {/* Görevi */}
+                                {citizen.gorevi && (
+                                    <div className="text-center px-3 py-1.5 rounded-lg text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
+                                        🎖️ {citizen.gorevi}
+                                    </div>
+                                )}
+
                                 {/* Görüşme Özeti */}
                                 <div className="mt-2 pt-3 border-t border-gray-100">
                                     <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Görüşme</div>

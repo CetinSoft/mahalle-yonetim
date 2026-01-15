@@ -1,6 +1,6 @@
 import { auth } from "@/auth"
 import { query, queryOne } from "@/lib/db"
-import { isAdminTC } from "@/lib/admin"
+import { isAdminTC, getUserIlces } from "@/lib/admin"
 import Link from "next/link"
 
 interface MahalleStats {
@@ -18,6 +18,10 @@ export default async function DashboardPage() {
     const tcNo = session?.user?.image
     const isAdmin = isAdminTC(tcNo)
 
+    // İlçe yöneticisi kontrolü
+    const userIlces = await getUserIlces(tcNo)
+    const isDistrictAdmin = userIlces.length > 0
+
     // Kullanıcının yetkili olduğu mahalleyi bul
     let userMahalle = session?.user?.email
 
@@ -31,13 +35,13 @@ export default async function DashboardPage() {
         }
     }
 
-    if (!userMahalle && !isAdmin) {
+    if (!userMahalle && !isAdmin && !isDistrictAdmin) {
         return <div className="p-10 text-center text-red-600 font-semibold">Mahalle yetkisi bulunamadı. Lütfen yöneticinizle iletişime geçin.</div>
     }
 
     // Mahalle koşulu
-    const mahalleCondition = isAdmin ? '' : 'WHERE "mahalle" = $1'
-    const mahalleParams = isAdmin ? [] : [userMahalle]
+    const mahalleCondition = (isAdmin || isDistrictAdmin) ? '' : 'WHERE "mahalle" = $1'
+    const mahalleParams = (isAdmin || isDistrictAdmin) ? [] : [userMahalle]
 
     // ===== İSTATİSTİKLER =====
 
@@ -242,25 +246,32 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* Admin Badge */}
-            {isAdmin && (
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-4 text-white shadow-lg flex items-center justify-between">
+            {/* Admin/İlçe Yöneticisi Badge */}
+            {(isAdmin || isDistrictAdmin) && (
+                <div className={`bg-gradient-to-r ${isAdmin ? 'from-purple-600 to-pink-600' : 'from-indigo-600 to-blue-600'} rounded-xl p-4 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4`}>
                     <div className="flex items-center gap-3">
                         <div className="bg-white/20 p-2 rounded-full">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
                         </div>
                         <div>
-                            <span className="font-bold">Yönetici Modu</span>
-                            <span className="text-purple-200 ml-2 text-sm">Tüm mahallelere erişiminiz var</span>
+                            <span className="font-bold">{isAdmin ? 'Yönetici Modu' : 'İlçe Yöneticisi'}</span>
+                            <span className={`${isAdmin ? 'text-purple-200' : 'text-blue-200'} ml-2 text-sm`}>
+                                {isAdmin ? 'Tüm mahallelere erişiminiz var' : `${userIlces.join(', ')} ilçelerine erişiminiz var`}
+                            </span>
                         </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        <Link href="/admin/kararlar" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
+                            📋 Kararlar
+                        </Link>
                         <Link href="/admin/arama-gorevleri" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
                             📞 Arama Görevleri
                         </Link>
-                        <Link href="/admin/users" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
-                            Kullanıcı Yetkilendirme →
-                        </Link>
+                        {isAdmin && (
+                            <Link href="/admin/users" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
+                                Kullanıcı Yetkilendirme →
+                            </Link>
+                        )}
                     </div>
                 </div>
             )}

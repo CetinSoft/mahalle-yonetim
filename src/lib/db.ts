@@ -151,3 +151,19 @@ export interface FaaliyetWithKatilimcilar extends Faaliyet {
     }[]
 }
 
+// Toplantı Kararları Takip
+export interface ToplantiKarari {
+    id: string
+    kararNo: string
+    kararIcerik: string
+    sorumluKisiler: string
+    baslangicTarihi: Date
+    terminTarihi: Date
+    durum: 'beklemede' | 'devam_ediyor' | 'tamamlandi'
+    olusturanTc: string
+    olusturanAdi: string
+    createdAt: Date
+    updatedAt: Date
+}
+
+
