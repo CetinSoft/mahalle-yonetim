@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import GorusmeForm from "@/components/GorusmeForm"
+import GorusmeSilButton from "@/components/GorusmeSilButton"
 import { formatPhoneNumber } from "@/lib/utils"
 
 export default async function CitizenDetailPage({ params, searchParams }: { params: { id: string }, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -238,9 +239,16 @@ export default async function CitizenDetailPage({ params, searchParams }: { para
                                                             {g.gorusmeYapan}
                                                         </span>
                                                     </div>
-                                                    <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getSonucStyle(g.sonuc)}`}>
-                                                        {getSonucLabel(g.sonuc)}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${getSonucStyle(g.sonuc)}`}>
+                                                            {getSonucLabel(g.sonuc)}
+                                                        </span>
+                                                        <GorusmeSilButton
+                                                            gorusmeId={g.id}
+                                                            citizenId={id}
+                                                            gorusmeTarihi={new Date(g.gorusmeTarihi).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                        />
+                                                    </div>
                                                 </div>
                                                 <p className="text-sm text-gray-600">{g.aciklama}</p>
                                             </div>

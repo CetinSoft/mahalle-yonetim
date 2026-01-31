@@ -292,7 +292,7 @@ export default async function GorusmelerPage({
                             <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-3">Görüşülen Kişi</th>
-                                    {isAdmin && !selectedMahalle && <th className="px-6 py-3 hidden md:table-cell">Mahalle</th>}
+                                    {isAdmin && !selectedMahalle && <th className="px-6 py-3">Mahalle</th>}
                                     <th className="px-6 py-3 hidden md:table-cell">Yargıtay</th>
                                     <th className="px-6 py-3 hidden md:table-cell">Görüşmeyi Yapan</th>
                                     <th className="px-6 py-3">Tarih</th>
@@ -316,7 +316,7 @@ export default async function GorusmelerPage({
                                                 </Link>
                                             </td>
                                             {isAdmin && !selectedMahalle && (
-                                                <td className="px-6 py-4 hidden md:table-cell">
+                                                <td className="px-6 py-4">
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
                                                         {g.citizenMahalle}
                                                     </span>

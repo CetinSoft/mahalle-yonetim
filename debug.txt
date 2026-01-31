@@ -12,3 +12,27 @@
 [2026-01-06T20:53:42.380Z] Upload started. Total rows identified: 2607
 [2026-01-06T20:53:42.381Z] Preview of data row (Index 1 or 0): ["KAĞITHANE","","AHMET İBRAHİM","ALBAYRAK","","","E","47491319198","05525984453","","","BAŞKA PARTİ ÜYESİ","17-06-2006","","","","","","2025-10-23","KAĞITHANE","","",""]
 [2026-01-06T20:53:42.381Z] TC Check (Index 7): "47491319198"
+[2026-01-15T12:37:10.401Z] File detected as HTML/XML exports. Parsing manually. 
+[2026-01-15T12:37:10.442Z] Upload started. Total rows identified: 2628
+[2026-01-15T12:37:10.442Z] Preview of data row (Index 1 or 0): ["KAĞITHANE","","AHMET İBRAHİM","ALBAYRAK","","","E","47491319198","05525984453","","","BAŞKA PARTİ ÜYESİ","17-06-2006","","","","","","2025-10-23","KAĞITHANE","","","MEHMET ALİ GÜNENÇ"]
+[2026-01-15T12:37:10.443Z] TC Check (Index 7): "47491319198"
+[2026-01-27T05:46:48.923Z] File detected as HTML/XML exports. Parsing manually. 
+[2026-01-27T05:46:48.925Z] Upload started. Total rows identified: 3
+[2026-01-27T05:46:48.925Z] Preview of data row (Index 1 or 0): ["&nbsp;\"+\r\n  \"&#171;","&lt","&gt","&#187;"]
+[2026-01-27T05:46:48.925Z] TC Check (Index 7): 
+[2026-01-27T05:47:36.148Z] File detected as HTML/XML exports. Parsing manually. 
+[2026-01-27T05:47:36.149Z] Upload started. Total rows identified: 3
+[2026-01-27T05:47:36.149Z] Preview of data row (Index 1 or 0): ["&nbsp;\"+\r\n  \"&#171;","&lt","&gt","&#187;"]
+[2026-01-27T05:47:36.149Z] TC Check (Index 7): 
+[2026-01-27T05:47:37.005Z] File detected as HTML/XML exports. Parsing manually. 
+[2026-01-27T05:47:37.006Z] Upload started. Total rows identified: 3
+[2026-01-27T05:47:37.006Z] Preview of data row (Index 1 or 0): ["&nbsp;\"+\r\n  \"&#171;","&lt","&gt","&#187;"]
+[2026-01-27T05:47:37.006Z] TC Check (Index 7): 
+[2026-01-27T05:47:59.661Z] File detected as HTML/XML exports. Parsing manually. 
+[2026-01-27T05:47:59.730Z] Upload started. Total rows identified: 2656
+[2026-01-27T05:47:59.731Z] Preview of data row (Index 1 or 0): ["KAĞITHANE","","ABDULHAMİT","KÖKMEN","","","E","14054433240","05455478118","","","AKTİF ÜYE","17-02-2004","","","","","","2026-01-17","KAĞITHANE","","","MEHMET ALİ GÜNENÇ"]
+[2026-01-27T05:47:59.731Z] TC Check (Index 7): "14054433240"
+[2026-01-31T11:05:16.600Z] File detected as HTML/XML exports. Parsing manually. 
+[2026-01-31T11:05:16.626Z] Upload started. Total rows identified: 2667
+[2026-01-31T11:05:16.626Z] Preview of data row (Index 1 or 0): ["KAĞITHANE","","ABDULHAMİT","KÖKMEN","","","E","14054433240","05455478118","","","AKTİF ÜYE","17-02-2004","","","","","","2026-01-17","KAĞITHANE","","","MEHMET ALİ GÜNENÇ"]
+[2026-01-31T11:05:16.627Z] TC Check (Index 7): "14054433240"

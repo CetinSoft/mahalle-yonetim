@@ -81,3 +81,30 @@ export async function getAllGorusmeler(): Promise<Gorusme[]> {
         return []
     }
 }
+
+// Görüşme sil
+export async function deleteGorusme(gorusmeId: string, citizenId: string): Promise<{ success?: boolean; error?: string }> {
+    const session = await auth()
+    if (!session?.user) {
+        return { error: "Yetkisiz işlem" }
+    }
+
+    if (!gorusmeId || !citizenId) {
+        return { error: "Geçersiz parametre" }
+    }
+
+    try {
+        await query(
+            'DELETE FROM "Gorusme" WHERE id = $1',
+            [gorusmeId]
+        )
+
+        revalidatePath('/dashboard')
+        revalidatePath(`/citizen/${citizenId}`)
+        revalidatePath('/gorusmeler')
+        return { success: true }
+    } catch (error) {
+        console.error("Görüşme silme hatası:", error)
+        return { error: "Görüşme silinirken hata oluştu" }
+    }
+}
