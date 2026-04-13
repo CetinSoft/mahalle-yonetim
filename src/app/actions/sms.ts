@@ -337,7 +337,6 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
 
                 // Check if request was successful
                 if (responseStatus >= 200 && responseStatus < 300) {
-
                     results.push({
                         memberId: member.id,
                         memberName,
@@ -351,9 +350,10 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
                         memberName,
                         phone: phoneNumber, // Show formatted number
                         success: false,
-                        error: `HTTP ${response.status}: ${responseText.substring(0, 200)}`
+                        error: `HTTP ${responseStatus}: ${responseText.substring(0, 200)}`
                     })
                 }
+
             } catch (error) {
                 console.error(`SMS Error for ${memberName}:`, error)
                 results.push({
