@@ -267,12 +267,16 @@ export default async function DashboardPage() {
                         <Link href="/admin/arama-gorevleri" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
                             📞 Arama Görevleri
                         </Link>
+                        <Link href="/admin/sms" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
+                            💬 SMS Gönder
+                        </Link>
                         {isAdmin && (
                             <Link href="/admin/users" className="px-3 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition">
                                 Kullanıcı Yetkilendirme →
                             </Link>
                         )}
                     </div>
+
                 </div>
             )}
 

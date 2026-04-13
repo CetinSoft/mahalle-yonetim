@@ -21,7 +21,7 @@ export const authConfig = {
 
             // Redirect logged-in users away from login
             if (isOnLogin && isLoggedIn) {
-                return Response.redirect(new URL('/dashboard', nextUrl))
+                return Response.redirect(new URL('/dashboard', nextUrl.origin))
             }
 
             return true

@@ -377,6 +377,12 @@ export default async function UyelerPage({
                                 <Link href="/gorusmeler" className="text-sm font-medium text-purple-600 hover:underline">
                                     📋 Görüşmeler
                                 </Link>
+                                {/* SMS Gönder linki - sadece admin ve ilçe adminleri */}
+                                {(isSuperAdmin || isDistrictAdmin) && (
+                                    <Link href="/admin/sms" className="text-sm font-medium text-green-600 hover:underline">
+                                        📱 Toplu SMS Gönder
+                                    </Link>
+                                )}
                                 {/* Only show Admin Link to the hardcoded Admin */}
                                 {isSuperAdmin && (
                                     <Link href="/admin/events" className="text-sm font-medium text-blue-600 hover:underline">
