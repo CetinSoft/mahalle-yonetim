@@ -174,11 +174,11 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
         }
 
         // Get SMS API credentials from environment
-        const smsApiUrl = process.env.SMS_API_URL
-        const smsUsername = process.env.SMS_USERNAME
-        const smsPassword = process.env.SMS_PASSWORD
-        const smsHeader = process.env.SMS_HEADER
-        const smsApiKey = process.env.SMS_API_KEY
+        const smsApiUrl = (process.env.SMS_API_URL || '').trim()
+        const smsUsername = (process.env.SMS_USERNAME || '').trim()
+        const smsPassword = (process.env.SMS_PASSWORD || '').trim()
+        const smsHeader = (process.env.SMS_HEADER || '').trim()
+        const smsApiKey = (process.env.SMS_API_KEY || '').trim()
 
         // Check if we have either username/password OR API Key
         if (!smsApiUrl || !smsHeader) {
@@ -273,33 +273,43 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
                 const xmlRequest = `<sms><username>${smsUsername}</username><password>${smsPassword}</password><header>${smsHeader}</header><validity>2880</validity><message><gsm><no>${phoneNumber}</no></gsm><msg>${personalizedMessage}</msg></message></sms>`
 
                 // Debug: Log the request
-                console.log('=== SMS API REQUEST (HTTP Module) ===')
-                console.log('Member:', memberName)
-                console.log('Phone:', phoneNumber)
-                console.log('API URL:', smsApiUrl)
+                console.log('--- SMS DEBUG: START REQUEST ---')
+                console.log(`Target: ${smsApiUrl}`)
+                console.log(`Recipient: ${memberName} (${phoneNumber})`)
 
-                // Send SMS request using http module (more stable for non-standard ports than fetch)
+                // Send SMS request using http/https module
                 const apiResponse = await new Promise<{status: number, statusText: string, text: string}>((resolve, reject) => {
                     try {
                         const parsedUrl = new URL(smsApiUrl);
+                        const isHttps = parsedUrl.protocol === 'https:';
+                        const transport = isHttps ? require('https') : require('http');
+                        
                         const options = {
                             hostname: parsedUrl.hostname,
-                            port: parsedUrl.port || 80,
+                            port: parsedUrl.port || (isHttps ? 443 : 80),
                             path: parsedUrl.pathname + parsedUrl.search,
                             method: 'POST',
+                            family: 4, // Force IPv4 to avoid connection issues
                             headers: {
                                 'Content-Type': 'text/xml; charset=UTF-8',
                                 'Content-Length': Buffer.byteLength(xmlRequest),
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SMS-Agent/1.0',
                                 'Connection': 'close'
                             },
-                            timeout: 15000
+                            timeout: 10000 // 10s timeout
                         };
 
-                        const req = http.request(options, (res) => {
+                        console.log(`Connection Options: ${JSON.stringify({
+                            hostname: options.hostname,
+                            port: options.port,
+                            protocol: parsedUrl.protocol,
+                            method: options.method
+                        })}`);
+
+                        const req = transport.request(options, (res: any) => {
                             let data = '';
                             res.setEncoding('utf8');
-                            res.on('data', (chunk) => { data += chunk; });
+                            res.on('data', (chunk: any) => { data += chunk; });
                             res.on('end', () => {
                                 resolve({
                                     status: res.statusCode || 0,
@@ -309,18 +319,22 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
                             });
                         });
 
-                        req.on('error', (e) => {
+                        req.on('error', (e: any) => {
+                            console.error(`--- SMS DEBUG: SOCKET ERROR: ${e.code || 'UNKNOWN'} ---`);
+                            console.error(e);
                             reject(e);
                         });
 
                         req.on('timeout', () => {
+                            console.error('--- SMS DEBUG: TIMEOUT REACHED (10s) ---');
                             req.destroy();
-                            reject(new Error('Connection Timeout (15s)'));
+                            reject(new Error('ETIMEDOUT: Connection timed out after 10s'));
                         });
 
                         req.write(xmlRequest);
                         req.end();
                     } catch (err) {
+                        console.error('--- SMS DEBUG: SETUP ERROR ---', err);
                         reject(err);
                     }
                 });
@@ -330,43 +344,46 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
                 const responseStatusText = apiResponse.statusText;
 
                 // Debug: Log the response
-                console.log('=== SMS API RESPONSE ===')
+                console.log('--- SMS DEBUG: RESPONSE RECEIVED ---')
                 console.log('Status:', responseStatus, responseStatusText)
-                console.log('Response:', responseText)
-                console.log('========================')
+                console.log('Body:', responseText.substring(0, 500))
+                console.log('------------------------------------')
 
-                // Check if request was successful
+                // Check if request was successful (Bizim SMS usually returns status code and text)
+                // Note: Even if status is 200, it might be an application-level error
                 if (responseStatus >= 200 && responseStatus < 300) {
                     results.push({
                         memberId: member.id,
                         memberName,
-                        phone: phoneNumber, // Show formatted number
+                        phone: phoneNumber,
                         success: true,
-                        error: `API Response: ${responseText.substring(0, 200)}` // Show API response for debugging
+                        error: `API Response: ${responseText.substring(0, 100)}` 
                     })
                 } else {
                     results.push({
                         memberId: member.id,
                         memberName,
-                        phone: phoneNumber, // Show formatted number
+                        phone: phoneNumber,
                         success: false,
-                        error: `HTTP ${responseStatus}: ${responseText.substring(0, 200)}`
+                        error: `HTTP ${responseStatus}: ${responseText.substring(0, 100)}`
                     })
                 }
 
             } catch (error) {
-                console.error(`SMS Error for ${memberName}:`, error)
+                const errorMessage = error instanceof Error ? error.message : 'Bilinmeyen hata';
+                console.error(`--- SMS DEBUG: FATAL ERROR for ${memberName} ---`, errorMessage);
+                
                 results.push({
                     memberId: member.id,
                     memberName,
-                    phone: phoneNumber || member.telefon, // Show formatted number if available
+                    phone: phoneNumber || member.telefon,
                     success: false,
-                    error: error instanceof Error ? error.message : 'Bilinmeyen hata'
+                    error: errorMessage
                 })
             }
 
             // Add small delay between requests to avoid overwhelming the API
-            await new Promise(resolve => setTimeout(resolve, 100))
+            await new Promise(resolve => setTimeout(resolve, 200))
         }
 
         return { results }
