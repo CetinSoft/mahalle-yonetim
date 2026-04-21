@@ -349,23 +349,34 @@ export async function sendBulkSMS(memberIds: string[], message: string): Promise
                 console.log('Body:', responseText.substring(0, 500))
                 console.log('------------------------------------')
 
-                // Check if request was successful (Bizim SMS usually returns status code and text)
-                // Note: Even if status is 200, it might be an application-level error
-                if (responseStatus >= 200 && responseStatus < 300) {
+                // Check if request was successful (Bizim SMS: 00 means Success)
+                const isBizimSmsSuccess = responseText.trim().startsWith('00');
+
+                if (responseStatus >= 200 && responseStatus < 300 && isBizimSmsSuccess) {
                     results.push({
                         memberId: member.id,
                         memberName,
                         phone: phoneNumber,
                         success: true,
-                        error: `API Response: ${responseText.substring(0, 100)}` 
+                        // Don't put successful response in error field, or label it clearly
+                        error: undefined 
                     })
                 } else {
+                    const errorCode = responseText.substring(0, 2);
+                    let errorDetail = responseText.substring(0, 100);
+                    
+                    // Common Bizim SMS error codes
+                    if (errorCode === '10') errorDetail = "Hatalı Kullanıcı Adı/Şifre veya IP yetkisi yok.";
+                    else if (errorCode === '20') errorDetail = "Mesaj metni boş veya geçersiz.";
+                    else if (errorCode === '30') errorDetail = "Geçersiz kısa mesaj başlığı (Header).";
+                    else if (errorCode === '70') errorDetail = "Hatalı sorgulama.";
+
                     results.push({
                         memberId: member.id,
                         memberName,
                         phone: phoneNumber,
                         success: false,
-                        error: `HTTP ${responseStatus}: ${responseText.substring(0, 100)}`
+                        error: `Hata ${responseStatus}: ${errorDetail}`
                     })
                 }
 
