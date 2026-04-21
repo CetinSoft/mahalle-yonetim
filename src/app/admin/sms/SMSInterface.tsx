@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getFilteredMembers, sendBulkSMS, SMSMember, SMSResult } from '@/app/actions/sms'
+import { getFilteredMembers, sendBulkSMS, SMSMember, SMSResult, getSMSFilterOptions } from '@/app/actions/sms'
 import { formatPhoneNumber } from '@/lib/utils'
 
 interface SMSInterfaceProps {
@@ -21,11 +21,14 @@ export default function SMSInterface({ isSuperAdmin }: SMSInterfaceProps) {
     const [showResults, setShowResults] = useState(false)
 
     // Filters
-    const [mahalle, setMahalle] = useState('')
-    const [cinsiyet, setCinsiyet] = useState('E')
-    const [yargitay, setYargitay] = useState('')
+    const [mahalle, setMahalle] = useState('all')
+    const [cinsiyet, setCinsiyet] = useState('all')
+    const [durum, setDurum] = useState('all')
     const [gorevi, setGorevi] = useState('')
     const [arama, setArama] = useState('')
+    
+    const [allMahalles, setAllMahalles] = useState<string[]>([])
+    const [allStatuses, setAllStatuses] = useState<string[]>([])
 
     // Load members
     const loadMembers = async () => {
@@ -34,7 +37,7 @@ export default function SMSInterface({ isSuperAdmin }: SMSInterfaceProps) {
         const { members: loadedMembers, error: loadError } = await getFilteredMembers({
             mahalle: mahalle || undefined,
             cinsiyet: cinsiyet === 'all' ? undefined : cinsiyet,
-            yargitay: yargitay || undefined,
+            yargitay: durum || undefined,
             gorevi: gorevi || undefined,
             arama: arama || undefined,
         })
@@ -47,10 +50,20 @@ export default function SMSInterface({ isSuperAdmin }: SMSInterfaceProps) {
         setLoading(false)
     }
 
+    // Load filter options on mount
+    useEffect(() => {
+        const loadOptions = async () => {
+            const { mahalles, statuses } = await getSMSFilterOptions()
+            setAllMahalles(mahalles)
+            setAllStatuses(statuses)
+        }
+        loadOptions()
+    }, [])
+
     // Load members on mount and filter change
     useEffect(() => {
         loadMembers()
-    }, [mahalle, cinsiyet, yargitay, gorevi])
+    }, [mahalle, cinsiyet, durum, gorevi])
 
     // Handle select all
     const handleSelectAll = () => {
@@ -125,7 +138,37 @@ export default function SMSInterface({ isSuperAdmin }: SMSInterfaceProps) {
             {/* Filters */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Filtreler</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                    {/* Mahalle Seçimi */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Mahalle</label>
+                        <select
+                            value={mahalle}
+                            onChange={(e) => setMahalle(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="all">Tümü (Yetkili Olduklarım)</option>
+                            {allMahalles.map(m => (
+                                <option key={m} value={m}>{m}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Üye Durumu */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Üye Durumu</label>
+                        <select
+                            value={durum}
+                            onChange={(e) => setDurum(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="all">Tümü</option>
+                            {allStatuses.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Cinsiyet */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Cinsiyet</label>
@@ -134,9 +177,9 @@ export default function SMSInterface({ isSuperAdmin }: SMSInterfaceProps) {
                             onChange={(e) => setCinsiyet(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
+                            <option value="all">Tümü</option>
                             <option value="E">Erkek (E)</option>
                             <option value="K">Kadın (K)</option>
-                            <option value="all">Tümü</option>
                         </select>
                     </div>
 
@@ -156,14 +199,14 @@ export default function SMSInterface({ isSuperAdmin }: SMSInterfaceProps) {
                     </div>
 
                     {/* Arama */}
-                    <div className="md:col-span-2">
+                    <div className="xl:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Arama</label>
                         <div className="flex gap-2">
                             <input
                                 type="text"
                                 value={arama}
                                 onChange={(e) => setArama(e.target.value)}
-                                placeholder="İsim, TC, Meslek, Görevi..."
+                                placeholder="İsim, TC..."
                                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                             <button

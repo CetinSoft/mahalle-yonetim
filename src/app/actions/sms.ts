@@ -39,6 +39,42 @@ export interface SMSResult {
 }
 
 /**
+ * Get available filter options for SMS (Mahalles and Statuses)
+ */
+export async function getSMSFilterOptions(): Promise<{ mahalles: string[], statuses: string[], error?: string }> {
+    try {
+        const session = await auth()
+        const tcNo = session?.user?.image
+        const isSuperAdmin = isAdminTC(tcNo)
+        const userIlces = await getUserIlces(tcNo)
+
+        let mahalles: string[] = []
+
+        if (isSuperAdmin) {
+            // Get all unique mahalles
+            const results = await query<{ mahalle: string }>(
+                'SELECT DISTINCT mahalle FROM "Citizen" WHERE mahalle IS NOT NULL AND mahalle != \'\' ORDER BY mahalle'
+            )
+            mahalles = results.map(r => r.mahalle)
+        } else if (userIlces.length > 0) {
+            // Get mahalles for authorized districts
+            for (const ilce of userIlces) {
+                const districtMahalles = await getDistrictMahalles(ilce)
+                mahalles.push(...districtMahalles)
+            }
+            mahalles = [...new Set(mahalles)].sort()
+        }
+
+        const statuses = ["AKTİF", "İSTİFA", "BAŞKA PARTİ", "TC HATALI"]
+
+        return { mahalles, statuses }
+    } catch (error) {
+        console.error("Get SMS Filter Options Error:", error)
+        return { mahalles: [], statuses: [], error: "Filtre seçenekleri yüklenirken hata oluştu" }
+    }
+}
+
+/**
  * Get filtered members for SMS sending
  */
 export async function getFilteredMembers(filters: {
@@ -61,28 +97,22 @@ export async function getFilteredMembers(filters: {
             return { members: [], error: "Bu işlem için yetkiniz yok" }
         }
 
-        // Validate filters
-        const validatedFilters = SMSFilterSchema.safeParse(filters)
-        if (!validatedFilters.success) {
-            return { members: [], error: "Geçersiz filtre parametreleri" }
-        }
-
-        const { mahalle, cinsiyet, yargitay, gorevi, arama } = validatedFilters.data
+        const { mahalle, cinsiyet, yargitay, gorevi, arama } = filters
 
         // Build WHERE clause based on user permissions
         let whereClause = ''
         const params: any[] = []
         let paramIndex = 1
 
-        // Mahalle filter based on permissions
+        // 1. Authorization & Mahalle Filter
         if (isSuperAdmin) {
-            if (mahalle) {
+            if (mahalle && mahalle !== 'all') {
                 whereClause = `WHERE "mahalle" = $${paramIndex}`
                 params.push(mahalle)
                 paramIndex++
             }
-        } else if (isDistrictAdmin) {
-            // Get all mahalles for user's districts
+        } else {
+            // District Admin or authorized user
             let userMahalles: string[] = []
             for (const ilce of userIlces) {
                 const districtMahalles = await getDistrictMahalles(ilce)
@@ -90,7 +120,7 @@ export async function getFilteredMembers(filters: {
             }
             userMahalles = [...new Set(userMahalles)]
 
-            if (mahalle && userMahalles.includes(mahalle)) {
+            if (mahalle && mahalle !== 'all' && userMahalles.includes(mahalle)) {
                 whereClause = `WHERE "mahalle" = $${paramIndex}`
                 params.push(mahalle)
                 paramIndex++
@@ -99,23 +129,29 @@ export async function getFilteredMembers(filters: {
                 whereClause = `WHERE "mahalle" IN (${placeholders})`
                 params.push(...userMahalles)
                 paramIndex += userMahalles.length
+            } else {
+                return { members: [], error: "Yetkili mahalle bulunamadı" }
             }
         }
 
-        // Apply other filters
-        if (yargitay) {
-            whereClause += (whereClause ? ' AND' : 'WHERE') + ` "yargitayDurumu" ILIKE $${paramIndex}`
+        // 2. Status (Yargıtay) Filter
+        if (yargitay && yargitay !== 'all') {
+            whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("yargitayDurumu" ILIKE $${paramIndex} OR "yargitayDurumu" ILIKE $${paramIndex + 1})`
             params.push(`%${yargitay}%`)
-            paramIndex++
+            // Handle Turkish characters variability
+            const altStatus = yargitay.replace(/İ/g, 'I').replace(/I/g, 'İ').replace(/Ş/g, 'S').replace(/S/g, 'Ş')
+            params.push(`%${altStatus}%`)
+            paramIndex += 2
         }
 
+        // 3. Gender Filter
         if (cinsiyet && cinsiyet !== 'all') {
             whereClause += (whereClause ? ' AND' : 'WHERE') + ` "cinsiyet" = $${paramIndex}`
             params.push(cinsiyet)
             paramIndex++
         }
 
-        // Görevi filter
+        // 4. Görevi Filter
         if (gorevi === 'var') {
             whereClause += (whereClause ? ' AND' : 'WHERE') + ` "gorevi" IS NOT NULL AND "gorevi" != ''`
         } else if (gorevi === 'yok') {
@@ -124,7 +160,7 @@ export async function getFilteredMembers(filters: {
             whereClause += (whereClause ? ' AND' : 'WHERE') + ` "gorevi" ILIKE '%başmüşahit%'`
         }
 
-        // Search filter
+        // 5. Search Filter
         if (arama && arama.trim()) {
             const searchTerm = arama.trim()
             whereClause += (whereClause ? ' AND' : 'WHERE') + ` ("ad" ILIKE $${paramIndex} OR "soyad" ILIKE $${paramIndex} OR "tcNo" ILIKE $${paramIndex} OR CONCAT("ad", ' ', "soyad") ILIKE $${paramIndex} OR "meslek" ILIKE $${paramIndex} OR "gorevi" ILIKE $${paramIndex})`
